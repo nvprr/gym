@@ -306,6 +306,31 @@
           <div id="ach-list"></div>
         </div>
       </div>
+      <!-- SEZONY -->
+      <div class="card" style="margin-bottom:8px;">
+        <div class="card-title collapsible-header" onclick="toggleSeasons()">
+          <span>🌸 Sezony</span>
+          <span class="collapse-chevron" id="seasons-chevron">›</span>
+        </div>
+        <div id="seasons-body" style="display:none;">
+          <div id="seasons-year-tabs" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none;"></div>
+          <div id="seasons-grid"></div>
+          <div id="seasons-detail" style="display:none;"></div>
+        </div>
+      </div>
+
+      <!-- GYMFLOW WRAPPED -->
+      <div class="card" style="margin-bottom:8px;">
+        <div class="card-title collapsible-header" onclick="toggleWrapped()">
+          <span>🎉 GymFlow Wrapped</span>
+          <span class="collapse-chevron" id="wrapped-chevron">›</span>
+        </div>
+        <div id="wrapped-body" style="display:none;">
+          <div id="wrapped-year-tabs" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none;"></div>
+          <div id="wrapped-container"></div>
+        </div>
+      </div>
+
       <div class="card" style="margin-bottom:8px;" id="profile-settings-card">
         <div class="card-title collapsible-header" onclick="toggleProfileSettings()"><span>Ustawienia</span><span class="collapse-chevron" id="profile-settings-chevron">›</span></div>
         <div class="profile-settings-body open" id="profile-settings-body">
