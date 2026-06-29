@@ -43,6 +43,9 @@ function endWorkout(){
   document.getElementById('timer-overlay').classList.remove('open');
   var mb=document.getElementById('workout-mini-bar');
   if(mb) mb.style.display='none';
+  var tmb=document.getElementById('timer-mini-bar');
+  if(tmb) tmb.style.display='none';
+  timerState.minimized=false;
   const duration=Math.floor((Date.now()-workoutState.startTime)/1000);
   const avgRest=workoutState.activeRestCount>0?Math.round(workoutState.totalRestTime/workoutState.activeRestCount):0;
   recomputeLiveTotals();
@@ -278,7 +281,7 @@ function showPRCelebration(name,weight,reps){
 
 function startRestTimer(seconds,setInfo){
   stopTimer();
-  timerState={remaining:seconds,total:seconds,paused:false,interval:null,reminderTimeout:null};
+  timerState={remaining:seconds,total:seconds,paused:false,interval:null,reminderTimeout:null,startedAt:Date.now(),minimized:false};
   document.getElementById('timer-overlay').classList.add('open');
   document.getElementById('timer-set-info').textContent=setInfo;
   document.getElementById('timer-msg').style.display='none';
@@ -286,6 +289,10 @@ function startRestTimer(seconds,setInfo){
   updateTimerDisplay();
   updateTimerRing();
   timerState.interval=setInterval(tickTimer,1000);
+  // Zaplanuj powiadomienie push gdy timer skończy
+  requestNotificationPermission(function(granted) {
+    if (granted) scheduleTimerNotification(seconds);
+  });
 }
 
 function tickTimer(){
@@ -304,16 +311,15 @@ function tickTimer(){
 }
 
 function updateTimerDisplay(){
-  var el=document.getElementById('timer-display');
-  if(!el)return;
   var s=timerState.remaining;
   var mins=Math.floor(s/60);
   var secs=s%60;
   var secsStr=secs<10?'0'+secs:String(secs);
-  el.textContent=(s>=60?mins+':'+secsStr:'0:'+secsStr);
-  el.className='timer-big';
-  if(s<=10&&s>0) el.classList.add('urgent');
-  if(s<=0) el.classList.add('done-color');
+  var txt=(s>=60?mins+':'+secsStr:'0:'+secsStr);
+  var el=document.getElementById('timer-display');
+  if(el){el.textContent=txt;el.className='timer-big';if(s<=10&&s>0)el.classList.add('urgent');if(s<=0)el.classList.add('done-color');}
+  var mini=document.getElementById('timer-mini-display');
+  if(mini) mini.textContent=txt;
 }
 
 function updateTimerRing(){
@@ -360,9 +366,30 @@ function toggleTimerPause(){
   document.getElementById('timer-pause-btn').textContent=timerState.paused?'▶ Wznów':'⏸ Pauza';
 }
 
+function minimizeTimer(){
+  document.getElementById('timer-overlay').classList.remove('open');
+  timerState.minimized=true;
+  var mb=document.getElementById('timer-mini-bar');
+  if(mb) mb.style.display='flex';
+  updateTimerDisplay();
+}
+
+function maximizeTimer(){
+  var mb=document.getElementById('timer-mini-bar');
+  if(mb) mb.style.display='none';
+  timerState.minimized=false;
+  document.getElementById('timer-overlay').classList.add('open');
+  updateTimerDisplay();
+  updateTimerRing();
+}
+
 function skipTimer(){
   stopTimer();
+  cancelTimerNotification();
   document.getElementById('timer-overlay').classList.remove('open');
+  var mb=document.getElementById('timer-mini-bar');
+  if(mb) mb.style.display='none';
+  timerState.minimized=false;
   document.getElementById('timer-msg').style.display='none';
 }
 
@@ -371,6 +398,27 @@ function stopTimer(){
   clearTimeout(timerState.reminderTimeout);
   timerState.interval=null;
 }
+
+// Liczenie w tle — korekta po powrocie
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='visible'&&timerState.interval&&!timerState.paused&&timerState.startedAt){
+    var elapsed=Math.floor((Date.now()-timerState.startedAt)/1000);
+    var newRemaining=timerState.total-elapsed;
+    if(newRemaining<=0){
+      timerState.remaining=0;
+      updateTimerDisplay();
+      updateTimerRing();
+      clearInterval(timerState.interval);
+      timerState.interval=null;
+      timerFinished();
+      if(timerState.minimized) maximizeTimer();
+    } else {
+      timerState.remaining=newRemaining;
+      updateTimerDisplay();
+      updateTimerRing();
+    }
+  }
+});
 
 function adjustTimer(d){
   timerState.remaining=Math.max(5,timerState.remaining+d);

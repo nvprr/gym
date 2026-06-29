@@ -56,3 +56,33 @@ function doScheduleNotif(){
   },delay);
 }
 
+
+// ── Timer notifications (Service Worker) ──
+
+function requestNotificationPermission(callback) {
+  if (!('Notification' in window)) { if(callback) callback(false); return; }
+  if (Notification.permission === 'granted') { if(callback) callback(true); return; }
+  Notification.requestPermission().then(function(p) {
+    if(callback) callback(p === 'granted');
+  });
+}
+
+function scheduleTimerNotification(remainingSeconds) {
+  // Wysyłamy do Service Workera żeby pokazał powiadomienie po X sekundach
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.ready.then(function(reg) {
+    if (!reg.active) return;
+    reg.active.postMessage({
+      type: 'TIMER_NOTIFICATION',
+      delay: remainingSeconds * 1000
+    });
+  });
+}
+
+function cancelTimerNotification() {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.ready.then(function(reg) {
+    if (!reg.active) return;
+    reg.active.postMessage({ type: 'CANCEL_TIMER_NOTIFICATION' });
+  });
+}
