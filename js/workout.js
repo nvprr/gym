@@ -37,9 +37,9 @@ function beginWorkout(planId,dayIdx,day,planName){
 
 function endWorkout(){
   stopTimer();clearInterval(workoutState.stopwatchInterval);
-  var tv = document.getElementById('training-view');
-  tv.classList.remove('open');
-  tv.style.display = '';
+  var _tv=document.getElementById('training-view');
+  _tv.classList.remove('open');
+  _tv.style.display='';
   document.getElementById('timer-overlay').classList.remove('open');
   var mb=document.getElementById('workout-mini-bar');
   if(mb) mb.style.display='none';
@@ -385,21 +385,20 @@ function closeReminder(){
 }
 
 function minimizeWorkout(){
-  var tv = document.getElementById('training-view');
-  tv.classList.remove('open');
-  tv.style.display = '';
+  var _tv2=document.getElementById('training-view');
+  _tv2.classList.remove('open');
+  _tv2.style.display='';
   var bar=document.getElementById('workout-mini-bar');
-  if(bar) bar.style.display='flex';
+  bar.style.display='flex';
   var mn=document.getElementById('mini-plan-name');
   if(mn) mn.textContent=workoutState.planName||'Trening';
 }
 
 function maximizeWorkout(){
-  var bar = document.getElementById('workout-mini-bar');
-  if(bar) bar.style.display='none';
-  var tv = document.getElementById('training-view');
-  tv.style.display = '';
-  tv.classList.add('open');
+  document.getElementById('workout-mini-bar').style.display='none';
+  var _tv3=document.getElementById('training-view');
+  _tv3.style.display='';
+  _tv3.classList.add('open');
 }
 
 function repeatLastWorkout(){
@@ -464,14 +463,27 @@ function renderHistory(){
   el.innerHTML=[...state.workouts].reverse().map(function(w){
     const d=new Date(w.date);
     var ratingHtml=w.rating?'<div style="font-size:14px;font-weight:700;color:var(--yellow)">'+w.rating+'/10</div>':'';
-    return '<div class="history-item" onclick="showWorkoutDetail(\''+w.id+'\')">'
+    return '<div class="history-item" style="display:flex;align-items:center;gap:8px;">'
+      +'<div style="display:flex;align-items:center;flex:1;cursor:pointer;min-width:0;" onclick="showWorkoutDetail(\''+w.id+'\')">'
       +'<div class="history-date-badge"><div class="history-date-day">'+d.getDate()+'</div><div class="history-date-month">'+months[d.getMonth()]+'</div></div>'
-      +'<div style="flex:1;"><div style="font-weight:700;">'+(w.planName||'Trening')+'</div><div style="font-size:12px;color:var(--text3);">'+(w.dayName||'')+'</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">'+(w.exercises?.length||0)+' ćwiczeń · '+formatTime(w.duration||0)+' · '+(w.tonnage||0).toFixed(0)+'kg</div></div>'
-      +'<div style="text-align:right;">'+ratingHtml+'<div style="color:var(--text4);font-size:18px;">›</div></div>'
+      +'<div style="flex:1;min-width:0;"><div style="font-weight:700;">'+(w.planName||'Trening')+'</div><div style="font-size:12px;color:var(--text3);">'+(w.dayName||'')+'</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">'+(w.exercises?.length||0)+' ćwiczeń · '+formatTime(w.duration||0)+' · '+(w.tonnage||0).toFixed(0)+'kg</div></div>'
+      +'<div style="text-align:right;margin-right:6px;">'+ratingHtml+'<div style="color:var(--text4);font-size:18px;">›</div></div>'
+      +'</div>'
+      +'<button onclick="event.stopPropagation();deleteWorkout(\''+w.id+'\')" style="flex-shrink:0;background:rgba(255,69,58,.12);border:none;color:var(--red);font-size:14px;padding:7px 10px;border-radius:10px;cursor:pointer;">🗑</button>'
       +'</div>';
   }).join('');
 }
 
+
+async function deleteWorkout(id){
+  if(!confirm('Usunąć ten trening?'))return;
+  state.workouts=state.workouts.filter(function(w){return w.id!==id;});
+  await dbPut('workouts',{id:'all',data:state.workouts});
+  renderHistory();
+  renderCalendar();
+  refreshDashboard();
+  showNotif('🗑','Trening usunięty','');
+}
 function calChangeMonth(d){
   calMonth+=d;
   if(calMonth<0){calMonth=11;calYear--;}

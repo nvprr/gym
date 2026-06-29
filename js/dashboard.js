@@ -155,15 +155,18 @@ function renderDashboardCardContent(key,editMode){
       var goalMl = hGoal * mlPerGlass;
       var pct = Math.min(100, Math.round(glasses / hGoal * 100));
       var reached = glasses >= hGoal;
-      // SVG ring
-      var r = 38; var circ = Math.round(2 * Math.PI * r);
-      var dash = Math.round(circ * pct / 100);
+      // SVG ring — stroke-dashoffset technique (płynna animacja od 0%)
+      var r = 38;
+      var circ = parseFloat((2 * Math.PI * r).toFixed(2));
+      var filled = parseFloat((circ * pct / 100).toFixed(2));
+      var offset = parseFloat((circ - filled).toFixed(2));
       var ringColor = reached ? 'var(--green)' : 'var(--accent)';
       var ringHtml = '<svg width="100" height="100" viewBox="0 0 100 100" style="display:block;margin:0 auto 8px;">'
         + '<circle cx="50" cy="50" r="'+r+'" fill="none" stroke="var(--surface2)" stroke-width="8"/>'
         + '<circle cx="50" cy="50" r="'+r+'" fill="none" stroke="'+ringColor+'" stroke-width="8"'
-        + ' stroke-dasharray="'+dash+' '+circ+'" stroke-dashoffset="'+Math.round(circ*0.25)+'"'
-        + ' stroke-linecap="round" style="transition:stroke-dasharray .5s ease;"/>'
+        + ' stroke-dasharray="'+circ+'" stroke-dashoffset="'+offset+'"'
+        + ' stroke-linecap="round" transform="rotate(-90 50 50)"'
+        + ' style="transition:stroke-dashoffset .5s cubic-bezier(.4,0,.2,1),stroke .3s ease;"/>'
         + '<text x="50" y="44" text-anchor="middle" font-size="13" fill="var(--text)" font-weight="700">💧</text>'
         + '<text x="50" y="60" text-anchor="middle" font-size="12" fill="var(--text)" font-weight="800">'+totalMl+'ml</text>'
         + '</svg>';
@@ -175,19 +178,17 @@ function renderDashboardCardContent(key,editMode){
       var btnStyle = 'background:var(--surface2);border:none;border-radius:10px;padding:8px 18px;font-size:18px;cursor:pointer;color:var(--text);';
       var html = '<div class="card-title">💧 Nawodnienie</div>';
       html += ringHtml;
-      html += '<div style="display:flex;justify-content:center;flex-wrap:wrap;gap:2px;margin:4px 0 8px;">'+glassIcons+'</div>';
+      html += '<div data-hi style="display:flex;justify-content:center;flex-wrap:wrap;gap:2px;margin:4px 0 8px;">'+glassIcons+'</div>';
       html += '<div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px;">';
       html += '<button onclick="adjustHydration(-1)" style="'+btnStyle+'">➖</button>';
-      html += '<div style="text-align:center;"><div style="font-size:18px;font-weight:800;color:'+(reached?'var(--green)':'var(--accent)')+'">'+glasses+' / '+hGoal+'</div><div style="font-size:11px;color:var(--text3);">szklanek</div></div>';
+      html += '<div style="text-align:center;"><div data-hc style="font-size:18px;font-weight:800;color:'+(reached?'var(--green)':'var(--accent)')+'">'+glasses+' / '+hGoal+'</div><div style="font-size:11px;color:var(--text3);">szklanek</div></div>';
       html += '<button onclick="adjustHydration(1)" style="'+btnStyle+'">➕</button>';
       html += '</div>';
-      if (reached) {
-        html += '<div style="text-align:center;font-size:13px;color:var(--green);font-weight:700;padding:4px 0;">🎉 Dzienny cel osiągnięty!</div>';
-      }
+      html += '<div data-hr style="text-align:center;font-size:13px;color:var(--green);font-weight:700;padding:4px 0;display:'+(reached?'block':'none')+';">🎉 Dzienny cel osiągnięty!</div>';
       html += '<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;padding-top:10px;border-top:.5px solid var(--border2);">'
         + '<span style="font-size:11px;color:var(--text3);">Cel:</span>'
         + '<input type="number" min="1" max="20" value="'+hGoal+'" style="width:50px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px;font-weight:700;text-align:center;padding:4px;" onchange="setHydrationGoal(this.value)">'
-        + '<span style="font-size:11px;color:var(--text3);">szklanek &nbsp;·&nbsp; '+mlPerGlass+'ml/szt.</span>'
+        + '<span style="font-size:11px;color:var(--text3);">szklanek</span>'
         + '</div>';
       return html;
     }
