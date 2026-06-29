@@ -306,31 +306,6 @@
           <div id="ach-list"></div>
         </div>
       </div>
-      <!-- SEZONY -->
-      <div class="card" style="margin-bottom:8px;">
-        <div class="card-title collapsible-header" onclick="toggleSeasons()">
-          <span>🌸 Sezony</span>
-          <span class="collapse-chevron" id="seasons-chevron">›</span>
-        </div>
-        <div id="seasons-body" style="display:none;">
-          <div id="seasons-year-tabs" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none;"></div>
-          <div id="seasons-grid"></div>
-          <div id="seasons-detail" style="display:none;"></div>
-        </div>
-      </div>
-
-      <!-- GYMFLOW WRAPPED -->
-      <div class="card" style="margin-bottom:8px;">
-        <div class="card-title collapsible-header" onclick="toggleWrapped()">
-          <span>🎉 GymFlow Wrapped</span>
-          <span class="collapse-chevron" id="wrapped-chevron">›</span>
-        </div>
-        <div id="wrapped-body" style="display:none;">
-          <div id="wrapped-year-tabs" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none;"></div>
-          <div id="wrapped-container"></div>
-        </div>
-      </div>
-
       <div class="card" style="margin-bottom:8px;" id="profile-settings-card">
         <div class="card-title collapsible-header" onclick="toggleProfileSettings()"><span>Ustawienia</span><span class="collapse-chevron" id="profile-settings-chevron">›</span></div>
         <div class="profile-settings-body open" id="profile-settings-body">
@@ -430,7 +405,7 @@
           </div>
         </div>
       </div>
-      <div style="text-align:center;padding:24px;color:var(--text4);font-size:12px;">GymFlow v2.0.1 </div>
+      <div style="text-align:center;padding:24px;color:var(--text4);font-size:12px;">GymFlow v2.0.2 </div>
     </div>
 
   </div><!-- #content -->
@@ -485,9 +460,18 @@
   </div>
   <div class="timer-controls">
     <button class="timer-ctrl-btn" id="timer-pause-btn" onclick="toggleTimerPause()">⏸ Pauza</button>
+    <button class="timer-ctrl-btn" onclick="minimizeTimer()">▼ Minimalizuj</button>
     <button class="timer-ctrl-btn" onclick="skipTimer()">⏭ Pomiń</button>
   </div>
   <div id="timer-set-info" style="margin-top:12px;font-size:13px;color:var(--text3);text-align:center;"></div>
+</div>
+
+<!-- TIMER MINI BAR -->
+<div id="timer-mini-bar" style="display:none;position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:1100;background:var(--surface);border-radius:16px;padding:10px 16px;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,.4);border:1px solid var(--border2);min-width:220px;">
+  <span style="font-size:18px;">⏱</span>
+  <span id="timer-mini-display" style="font-size:18px;font-weight:800;color:var(--accent);flex:1;">1:30</span>
+  <button onclick="maximizeTimer()" style="background:var(--surface2);border:none;color:var(--text);border-radius:10px;padding:6px 12px;font-size:13px;cursor:pointer;">▲ Pokaż</button>
+  <button onclick="skipTimer()" style="background:rgba(255,69,58,.12);border:none;color:var(--red);border-radius:10px;padding:6px 12px;font-size:13px;cursor:pointer;">✕</button>
 </div>
 
 <!-- PR CELEBRATION -->
@@ -736,6 +720,16 @@ let state = {
 <script src="js/seasons.js"></script>
 <script src="js/app.js"></script>
 <script src="js/animations.js"></script>
-<script>init();</script>
+<script>
+  // Rejestracja Service Workera
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/sw.js').then(function(reg){
+      console.log('SW zarejestrowany:', reg.scope);
+    }).catch(function(err){
+      console.warn('SW błąd:', err);
+    });
+  }
+  init();
+</script>
 </body>
 </html>
