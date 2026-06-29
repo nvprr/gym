@@ -81,6 +81,7 @@ function setGenderFirstTime(g){
   state.settings.gender=g;
   state.settings.username=username;
   saveSettings();
+  localStorage.setItem('gymflow_gender_set','1');
   document.getElementById('gender-display').textContent=g==='male'?'Mężczyzna':'Kobieta';
   document.getElementById('profile-name-display').textContent=username;
   document.getElementById('gender-picker').classList.remove('open');

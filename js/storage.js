@@ -29,9 +29,9 @@ function saveSettings(){
   state.settings.restCompound=parseInt(document.getElementById('rest-compound').value)||90;
   state.settings.restIsolation=parseInt(document.getElementById('rest-isolation').value)||60;
   state.settings.restAbs=parseInt(document.getElementById('rest-abs').value)||45;
-  state.settings.username=state.settings.username||'GymFlow';
-  state.settings.avatar=state.settings.avatar||'🦁';
-  state.settings.dashboardGoal=state.settings.dashboardGoal||4;
+  if(!state.settings.username) state.settings.username='GymFlow';
+  if(!state.settings.avatar) state.settings.avatar='🦁';
+  if(!state.settings.dashboardGoal) state.settings.dashboardGoal=4;
   localStorage.setItem('gymflow_settings',JSON.stringify(state.settings));
 }
 
