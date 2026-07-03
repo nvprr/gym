@@ -127,12 +127,28 @@ function skipAchCelebration() {
   setTimeout(processAchUnlockQueue, 200);
 }
 
+// Helper: renderuje ikonę osiągnięcia — emoji lub PNG
+function renderAchIcon(icon, locked) {
+  if (!icon) return '🏅';
+  if (icon.startsWith('img:')) {
+    var src = icon.slice(4);
+    var style = locked ? 'width:36px;height:36px;object-fit:contain;opacity:.35;filter:grayscale(1);' : 'width:36px;height:36px;object-fit:contain;';
+    return '<img src="' + src + '" style="' + style + '" loading="lazy">';
+  }
+  return icon;
+}
+
 function processAchUnlockQueue() {
   if (!achUnlockQueue.length) { achUnlockShowing = false; return; }
   achUnlockShowing = true;
   var ach = achUnlockQueue.shift();
   var cel = document.getElementById('ach-celebration');
-  document.getElementById('ach-cel-icon').textContent = ach.icon;
+  var iconEl = document.getElementById('ach-cel-icon');
+  if (ach.icon && ach.icon.startsWith('img:')) {
+    iconEl.innerHTML = '<img src="' + ach.icon.slice(4) + '" style="width:48px;height:48px;object-fit:contain;">';
+  } else {
+    iconEl.textContent = ach.icon;
+  }
   document.getElementById('ach-cel-name').textContent = ach.name;
   document.getElementById('ach-cel-desc').textContent = ach.desc;
   var qEl = document.getElementById('ach-cel-queue');
@@ -215,7 +231,7 @@ function renderAchievements() {
     html += '<div class="ach-card">';
     // Icon
     html += '<div class="ach-icon-wrap '+(isUnlocked?'unlocked':'locked')+(isSecret?' secret':'')+'">';
-    html += isSecret ? '🔒' : ach.icon;
+    html += isSecret ? '🔒' : renderAchIcon(ach.icon, !isUnlocked);
     html += '</div>';
     // Info
     html += '<div class="ach-info">';

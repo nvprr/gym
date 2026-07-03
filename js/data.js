@@ -24,7 +24,7 @@ const MUSCLE_TILES = [
 const ACHIEVEMENTS = [
   // 🚀 START
   {id:'w1',   cat:'start',   icon:'🎯', name:'Pierwszy krok',        desc:'Wykonaj swój pierwszy trening',    check:function(d){return d.workouts>=1},      max:1},
-  {id:'w5',   cat:'start',   icon:'⭐', name:'Rozgrzewka',            desc:'5 ukończonych treningów',          check:function(d){return d.workouts>=5},      max:5},
+  {id:'w5',   cat:'start',   icon:'img:icons/achievements/achievement-warmup.png', name:'Rozgrzewka',            desc:'5 ukończonych treningów',          check:function(d){return d.workouts>=5},      max:5},
   {id:'w10',  cat:'start',   icon:'🔟', name:'Dziesiątka',            desc:'10 ukończonych treningów',         check:function(d){return d.workouts>=10},     max:10},
   {id:'w25',  cat:'start',   icon:'💥', name:'Ćwierć setki',          desc:'25 ukończonych treningów',         check:function(d){return d.workouts>=25},     max:25},
   {id:'w50',  cat:'start',   icon:'🔥', name:'Półsetka',              desc:'50 ukończonych treningów',         check:function(d){return d.workouts>=50},     max:50},
