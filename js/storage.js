@@ -29,9 +29,9 @@ function saveSettings(){
   state.settings.restCompound=parseInt(document.getElementById('rest-compound').value)||90;
   state.settings.restIsolation=parseInt(document.getElementById('rest-isolation').value)||60;
   state.settings.restAbs=parseInt(document.getElementById('rest-abs').value)||45;
-  if(!state.settings.username) state.settings.username='GymFlow';
-  if(!state.settings.avatar) state.settings.avatar='🦁';
-  if(!state.settings.dashboardGoal) state.settings.dashboardGoal=4;
+  state.settings.username=state.settings.username||'GymFlow';
+  state.settings.avatar=state.settings.avatar||'🦁';
+  state.settings.dashboardGoal=state.settings.dashboardGoal||4;
   localStorage.setItem('gymflow_settings',JSON.stringify(state.settings));
 }
 
@@ -72,7 +72,7 @@ function applyTheme() {
 
 // ── Theme System ──
 var ACCENT_THEMES = {
-  orange:   {accent:'#FF375F',accent2:'#FF6B35',glow:'rgba(255,55,95,0.25)',hover:'#e02d52',light:'rgba(255,55,95,0.15)',gs:'#FF375F',ge:'#FF6B35'},
+  orange:   {accent:'#ffb753',accent2:'#ffa726',glow:'rgba(255,183,83,0.25)',hover:'#e6a347',light:'rgba(255,183,83,0.15)',gs:'#ffb753',ge:'#ff8c00'},
   blue:     {accent:'#0A84FF',accent2:'#34AADC',glow:'rgba(10,132,255,0.25)',hover:'#0070e0',light:'rgba(10,132,255,0.15)',gs:'#0A84FF',ge:'#34AADC'},
   green:    {accent:'#30D158',accent2:'#34C759',glow:'rgba(48,209,88,0.25)',hover:'#28b84d',light:'rgba(48,209,88,0.15)',gs:'#30D158',ge:'#34C759'},
   purple:   {accent:'#BF5AF2',accent2:'#9B59B6',glow:'rgba(191,90,242,0.25)',hover:'#a84ee0',light:'rgba(191,90,242,0.15)',gs:'#BF5AF2',ge:'#9B59B6'},
