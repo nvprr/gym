@@ -253,17 +253,34 @@
 
     <!-- PROFILE -->
     <div id="view-profile" class="view">
-      <div class="page-header"><div class="page-title">Profil</div></div>
-      <div style="padding:8px 0 20px;position:relative;">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-          <div style="display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="openProfileSheet()">
-            <div class="profile-avatar" id="profile-avatar-icon">🦁</div>
-            <div>
-              <div class="profile-name" id="profile-name-display">GymFlow</div>
-            </div>
-          </div>
-          <button class="btn btn-icon" style="font-size:18px;" onclick="toggleProfilePanels()">⚙️</button>
-        </div>
+      <div class="page-header"><div class="page-title">Więcej</div></div>
+
+      <!-- SIATKA KAFELKÓW 3x2 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:0 16px 16px;">
+        <button onclick="toggleBodyMeasurements();document.getElementById('body-meas-body').scrollIntoView({behavior:'smooth'})" style="background:var(--surface);border:none;border-radius:16px;padding:16px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;">
+          <span style="font-size:24px;">📏</span>
+          <span style="font-size:11px;font-weight:600;color:var(--text2);">Pomiary</span>
+        </button>
+        <button onclick="toggleAchievements();document.getElementById('ach-body').scrollIntoView({behavior:'smooth'})" style="background:var(--surface);border:none;border-radius:16px;padding:16px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;">
+          <span style="font-size:24px;">🏅</span>
+          <span style="font-size:11px;font-weight:600;color:var(--text2);">Osiągnięcia</span>
+        </button>
+        <button onclick="toggleSeasons();document.getElementById('seasons-body').scrollIntoView({behavior:'smooth'})" style="background:var(--surface);border:none;border-radius:16px;padding:16px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;">
+          <span style="font-size:24px;">🌸</span>
+          <span style="font-size:11px;font-weight:600;color:var(--text2);">Sezony</span>
+        </button>
+        <button onclick="toggleWrapped();document.getElementById('wrapped-body').scrollIntoView({behavior:'smooth'})" style="background:var(--surface);border:none;border-radius:16px;padding:16px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;">
+          <span style="font-size:24px;">🎉</span>
+          <span style="font-size:11px;font-weight:600;color:var(--text2);">Wrapped</span>
+        </button>
+        <button onclick="toggleProfileSettings();document.getElementById('profile-settings-body').scrollIntoView({behavior:'smooth'})" style="background:var(--surface);border:none;border-radius:16px;padding:16px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;">
+          <span style="font-size:24px;">⚙️</span>
+          <span style="font-size:11px;font-weight:600;color:var(--text2);">Ustawienia</span>
+        </button>
+        <button onclick="toggleProfileExport();document.getElementById('profile-export-body').scrollIntoView({behavior:'smooth'})" style="background:var(--surface);border:none;border-radius:16px;padding:16px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;">
+          <span style="font-size:24px;">💾</span>
+          <span style="font-size:11px;font-weight:600;color:var(--text2);">Dane</span>
+        </button>
       </div>
       <div class="card" style="margin-bottom:8px;" id="profile-data-card">
         <div class="card-title collapsible-header" onclick="toggleBodyMeasurements()">
@@ -276,6 +293,7 @@
         <div id="body-meas-body" style="display:none;">
           <div id="body-meas-latest"></div>
           <div id="body-meas-history"></div>
+          <button onclick="toggleBodyMeasurements()" style="width:100%;margin-top:12px;padding:12px;background:var(--surface2);border:none;border-radius:12px;color:var(--text3);font-size:14px;font-weight:600;cursor:pointer;">✕ Zamknij</button>
         </div>
       </div>
       <!-- ACHIEVEMENTS - pod Dane ciała -->
