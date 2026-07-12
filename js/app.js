@@ -9,17 +9,17 @@ async function init(){
   if(!localStorage.getItem('gymflow_gender_set')){
     document.getElementById('gender-picker').classList.add('open');
   } else {
-    refreshDashboard();
-    renderMuscleMapMain();
+    // requestAnimationFrame ensures DOM is painted before we fill it
+    requestAnimationFrame(function(){
+      refreshDashboard();
+      renderMuscleMapMain();
+    });
   }
 
   // Retroactive achievements for existing users (silent — no animation)
   if(state.workouts.length > 0){
     checkAchievements(false);
   }
-
-  // Fix: second refresh ensures dashboard renders after all CSS/fonts loaded
-  setTimeout(function(){ refreshDashboard(); }, 100);
 
   // Seed sample plan
   if(!state.plans.length){
