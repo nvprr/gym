@@ -404,11 +404,9 @@
         <div class="profile-data-body open" id="profile-export-body">
           <div class="list-group" style="margin:0;">
             <div class="list-item" onclick="exportData()"><div class="list-icon" style="background:rgba(48,209,88,.15);">📤</div><div class="list-text"><div class="list-title">Eksportuj dane</div></div><div class="list-chevron">›</div></div>
-            <div class="list-item" onclick="document.getElementById('import-file').click()"><div class="list-icon" style="background:rgba(10,132,255,.15);">📥</div><div class="list-text"><div class="list-title">Importuj dane</div></div><div class="list-chevron">›</div></div>
-            <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importData(this)">
+            <div class="list-item" onclick="importData_trigger()"><div class="list-icon" style="background:rgba(10,132,255,.15);">📥</div><div class="list-text"><div class="list-title">Importuj dane</div></div><div class="list-chevron">›</div></div>
             <div class="list-item" onclick="createBackup()"><div class="list-icon" style="background:rgba(48,209,88,.15);">💾</div><div class="list-text"><div class="list-title">Utwórz kopię zapasową</div><div class="list-sub">Pełny backup całej aplikacji</div></div><div class="list-chevron">›</div></div>
-            <div class="list-item" onclick="document.getElementById('restore-file').click()"><div class="list-icon" style="background:rgba(255,159,10,.15);">📂</div><div class="list-text"><div class="list-title">Przywróć kopię zapasową</div><div class="list-sub">Wczytaj plik backup</div></div><div class="list-chevron">›</div></div>
-            <input type="file" id="restore-file" accept=".json" style="display:none;" onchange="restoreBackup(this)">
+            <div class="list-item" onclick="restoreBackup_trigger()"><div class="list-icon" style="background:rgba(255,159,10,.15);">📂</div><div class="list-text"><div class="list-title">Przywróć kopię zapasową</div><div class="list-sub">Wczytaj plik backup</div></div><div class="list-chevron">›</div></div>
             <div class="list-item" onclick="if(confirm('Na pewno?'))clearData()"><div class="list-icon" style="background:rgba(255,69,58,.15);">🗑</div><div class="list-text"><div class="list-title" style="color:var(--red);">Wyczyść dane</div></div><div class="list-chevron">›</div></div>
           </div>
         </div>
@@ -720,5 +718,12 @@ let state = {
 <script src="js/app.js"></script>
 <script src="js/animations.js"></script>
 <script>init();</script>
+<!-- File inputs at body level for iOS compatibility -->
+<input type="file" id="import-file"  accept=".json" style="position:fixed;top:-9999px;opacity:0;" onchange="importData(this)">
+<input type="file" id="restore-file" accept=".json" style="position:fixed;top:-9999px;opacity:0;" onchange="restoreBackup(this)">
+<script>
+function importData_trigger()  { document.getElementById('import-file').value='';  document.getElementById('import-file').click(); }
+function restoreBackup_trigger(){ document.getElementById('restore-file').value=''; document.getElementById('restore-file').click(); }
+</script>
 </body>
 </html>
