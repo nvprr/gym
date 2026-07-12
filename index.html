@@ -253,96 +253,169 @@
 
     <!-- PROFILE -->
     <div id="view-profile" class="view">
-      <div class="page-header"><div class="page-title">Więcej</div></div>
-
-      <!-- SIATKA KAFELKÓW -->
-      <div id="wiecej-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:0 16px 16px;">
-        <button onclick="showWiecej('profil')" style="background:var(--surface);border:none;border-radius:16px;padding:16px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;">
-          <span style="font-size:26px;">👤</span><span style="font-size:11px;font-weight:600;color:var(--text2);">Profil</span>
-        </button>
-        <button onclick="showWiecej('pomiary')" style="background:var(--surface);border:none;border-radius:16px;padding:16px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;">
-          <span style="font-size:26px;">📏</span><span style="font-size:11px;font-weight:600;color:var(--text2);">Pomiary</span>
-        </button>
-        <button onclick="showWiecej('osiagniecia')" style="background:var(--surface);border:none;border-radius:16px;padding:16px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;">
-          <span style="font-size:26px;">🏅</span><span style="font-size:11px;font-weight:600;color:var(--text2);">Osiągnięcia</span>
-        </button>
-        <button onclick="showWiecej('sezony')" style="background:var(--surface);border:none;border-radius:16px;padding:16px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;">
-          <span style="font-size:26px;">🌸</span><span style="font-size:11px;font-weight:600;color:var(--text2);">Sezony</span>
-        </button>
-        <button onclick="showWiecej('wrapped')" style="background:var(--surface);border:none;border-radius:16px;padding:16px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;">
-          <span style="font-size:26px;">🎉</span><span style="font-size:11px;font-weight:600;color:var(--text2);">Wrapped</span>
-        </button>
-        <button onclick="showWiecej('ustawienia')" style="background:var(--surface);border:none;border-radius:16px;padding:16px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;">
-          <span style="font-size:26px;">⚙️</span><span style="font-size:11px;font-weight:600;color:var(--text2);">Ustawienia</span>
-        </button>
-        <button onclick="showWiecej('dane')" style="background:var(--surface);border:none;border-radius:16px;padding:16px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;">
-          <span style="font-size:26px;">💾</span><span style="font-size:11px;font-weight:600;color:var(--text2);">Dane</span>
-        </button>
-      </div>
-
-      <!-- POD-WIDOK -->
-      <div id="wiecej-subview" style="display:none;">
-        <div style="display:flex;align-items:center;gap:10px;padding:0 16px 16px;">
-          <button onclick="hideWiecej()" style="background:var(--surface2);border:none;border-radius:10px;padding:8px 14px;color:var(--text);font-size:14px;font-weight:600;cursor:pointer;">← Wróć</button>
-          <div id="wiecej-subview-title" style="font-size:18px;font-weight:700;"></div>
+      <div class="page-header"><div class="page-title">Profil</div></div>
+      <div style="padding:8px 0 20px;position:relative;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div style="display:flex;align-items:center;gap:12px;cursor:pointer;" onclick="openProfileSheet()">
+            <div class="profile-avatar" id="profile-avatar-icon">🦁</div>
+            <div>
+              <div class="profile-name" id="profile-name-display">GymFlow</div>
+            </div>
+          </div>
+          <button class="btn btn-icon" style="font-size:18px;" onclick="toggleProfilePanels()">⚙️</button>
         </div>
-        <div id="wiecej-subview-content"></div>
       </div>
-
-      <!-- Ukryte elementy wymagane przez istniejący JS -->
-      <div style="display:none;">
-        <div id="profile-avatar-icon">🦁</div>
-        <div id="profile-name-display">GymFlow</div>
-        <div id="gender-display">Mężczyzna</div>
-        <div id="profile-metrics-summary"></div>
-        <div id="profile-metrics-history"></div>
-        <div id="profile-metrics-chart"></div>
-        <div id="profile-data-body"></div>
-        <div id="profile-data-chevron"></div>
-        <div id="profile-settings-body"></div>
-        <div id="profile-settings-chevron"></div>
-        <div id="profile-export-body"></div>
-        <div id="profile-export-chevron"></div>
-        <div id="ach-summary-badge"></div>
-        <div id="ach-body"></div>
-        <div id="ach-chevron"></div>
-        <div id="ach-count-label"></div>
-        <div id="ach-pct-label"></div>
-        <div id="ach-progress-fill"></div>
-        <div id="ach-cat-chips"></div>
-        <div id="ach-list"></div>
-        <div id="body-meas-latest"></div>
-        <div id="body-meas-history"></div>
-        <div id="body-meas-body"></div>
-        <div id="body-meas-chevron"></div>
-        <div id="seasons-body"></div>
-        <div id="seasons-year-tabs"></div>
-        <div id="seasons-grid"></div>
-        <div id="seasons-detail"></div>
-        <div id="wrapped-body"></div>
-        <div id="wrapped-year-tabs"></div>
-        <div id="wrapped-container"></div>
-        <div id="notif-setting-sub"></div>
-        <div id="notif-freq-row"></div>
-        <div id="notif-hour-row"></div>
-        <div id="water-notif-sub"></div>
-        <div id="water-notif-interval-row"></div>
-        <select id="rest-compound"><option value="90" selected>90s</option></select>
-        <select id="rest-isolation"><option value="60" selected>60s</option></select>
-        <select id="rest-abs"><option value="45" selected>45s</option></select>
-        <input id="dashboard-goal-profile-input" type="number" value="4">
-        <button id="theme-toggle"></button>
-        <button id="vibration-toggle" class="toggle on"></button>
-        <button id="sound-toggle" class="toggle on"></button>
-        <button id="notif-toggle" class="toggle"></button>
-        <button id="water-notif-toggle" class="toggle"></button>
-        <select id="notif-freq"><option value="2" selected></option></select>
-        <input id="notif-hour" type="time" value="09:00">
-        <select id="water-notif-interval"><option value="60" selected></option></select>
+      <div class="card" style="margin-bottom:8px;" id="profile-data-card">
+        <div class="card-title collapsible-header" onclick="toggleBodyMeasurements()">
+          <span>📏 Pomiary</span>
+          <span style="display:flex;align-items:center;gap:8px;">
+            <button class="btn btn-secondary" style="padding:8px 12px;font-size:13px;min-width:90px;" onclick="event.stopPropagation();openBodyMeasurementsSheet()">Dodaj</button>
+            <span class="collapse-chevron" id="body-meas-chevron">›</span>
+          </span>
+        </div>
+        <div id="body-meas-body" style="display:none;">
+          <div id="body-meas-latest"></div>
+          <div id="body-meas-history"></div>
+        </div>
       </div>
-
-      <div style="text-align:center;padding:16px;color:var(--text4);font-size:12px;">GymFlow v2.0.0</div>
+      <!-- ACHIEVEMENTS - pod Dane ciała -->
+      <div class="card" style="margin-bottom:8px;">
+        <div class="card-title collapsible-header" onclick="toggleAchievements()">
+          <span>🏅 Osiągnięcia</span>
+          <span style="display:flex;align-items:center;gap:8px;">
+            <span id="ach-summary-badge" style="font-size:12px;color:var(--accent);font-weight:700;"></span>
+            <span class="collapse-chevron" id="ach-chevron">›</span>
+          </span>
+        </div>
+        <div id="ach-body" style="display:none;">
+          <div style="padding:0 0 12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <div id="ach-count-label" style="font-size:13px;color:var(--text3);"></div>
+              <div id="ach-pct-label" style="font-size:20px;font-weight:800;color:var(--accent);"></div>
+            </div>
+            <div style="background:var(--surface2);border-radius:6px;height:6px;overflow:hidden;">
+              <div id="ach-progress-fill" style="height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:6px;transition:width .6s cubic-bezier(.34,1.56,.64,1);width:0%;"></div>
+            </div>
+          </div>
+          <div style="overflow-x:auto;display:flex;gap:6px;padding-bottom:12px;scrollbar-width:none;" id="ach-cat-chips">
+            <button class="prog-tab active" onclick="setAchCat('all',this)">Wszystkie</button>
+            <button class="prog-tab" onclick="setAchCat('start',this)">🚀 Start</button>
+            <button class="prog-tab" onclick="setAchCat('streak',this)">🔥 Streak</button>
+            <button class="prog-tab" onclick="setAchCat('strength',this)">🏋️ Siła</button>
+            <button class="prog-tab" onclick="setAchCat('volume',this)">📈 Objętość</button>
+            <button class="prog-tab" onclick="setAchCat('sets',this)">💪 Serie</button>
+            <button class="prog-tab" onclick="setAchCat('reps',this)">🔁 Powt.</button>
+            <button class="prog-tab" onclick="setAchCat('time',this)">⏱️ Czas</button>
+            <button class="prog-tab" onclick="setAchCat('muscle',this)">🦵 Partie</button>
+            <button class="prog-tab" onclick="setAchCat('goals',this)">🎯 Cele</button>
+            <button class="prog-tab" onclick="setAchCat('gymdna',this)">🧬 GymDNA</button>
+            <button class="prog-tab" onclick="setAchCat('secret',this)">⭐ Sekretne</button>
+          </div>
+          <div id="ach-list"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:8px;" id="profile-settings-card">
+        <div class="card-title collapsible-header" onclick="toggleProfileSettings()"><span>Ustawienia</span><span class="collapse-chevron" id="profile-settings-chevron">›</span></div>
+        <div class="profile-settings-body open" id="profile-settings-body">
+          <div class="list-group" style="margin:0;">
+            <div style="padding:12px 16px;border-bottom:.5px solid var(--border2);">
+              <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">🌓 Wygląd</div>
+              <div style="display:flex;gap:8px;">
+                <button onclick="setAppearanceMode('dark')"  id="mode-dark"  style="flex:1;padding:9px 4px;border-radius:10px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;">🌙 Ciemny</button>
+                <button onclick="setAppearanceMode('light')" id="mode-light" style="flex:1;padding:9px 4px;border-radius:10px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;">☀️ Jasny</button>
+                <button onclick="setAppearanceMode('auto')"  id="mode-auto"  style="flex:1;padding:9px 4px;border-radius:10px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;">🌓 Auto</button>
+              </div>
+            </div>
+            <div style="padding:12px 16px;border-bottom:.5px solid var(--border2);">
+              <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">🎨 Kolor akcentu</div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button onclick="setAccentTheme('orange')"   data-theme="orange"   title="Orange"   style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#FF375F,#FF6B35);border:3px solid transparent;cursor:pointer;" id="ac-orange"></button>
+                <button onclick="setAccentTheme('blue')"     data-theme="blue"     title="Blue"     style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#0A84FF,#34AADC);border:3px solid transparent;cursor:pointer;" id="ac-blue"></button>
+                <button onclick="setAccentTheme('green')"    data-theme="green"    title="Green"    style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#30D158,#34C759);border:3px solid transparent;cursor:pointer;" id="ac-green"></button>
+                <button onclick="setAccentTheme('purple')"   data-theme="purple"   title="Purple"   style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#BF5AF2,#9B59B6);border:3px solid transparent;cursor:pointer;" id="ac-purple"></button>
+                <button onclick="setAccentTheme('red')"      data-theme="red"      title="Red"      style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#FF453A,#FF6961);border:3px solid transparent;cursor:pointer;" id="ac-red"></button>
+                <button onclick="setAccentTheme('pink')"     data-theme="pink"     title="Pink"     style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#FF2D92,#FF6EB0);border:3px solid transparent;cursor:pointer;" id="ac-pink"></button>
+                <button onclick="setAccentTheme('graphite')" data-theme="graphite" title="Graphite" style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#8E8E93,#AEAEB2);border:3px solid transparent;cursor:pointer;" id="ac-graphite"></button>
+              </div>
+            </div>
+            <div class="list-item" onclick="openSheet('gender-sheet')" style="cursor:pointer;">
+              <div class="list-text"><div class="list-title">Płeć</div><div class="list-sub" id="gender-display">Mężczyzna</div></div>
+              <div class="list-chevron">›</div>
+            </div>
+            <div class="list-item">
+              <div class="list-text"><div class="list-title">Cel tygodnia</div><div class="list-sub">Ile treningów chcesz zrobić w tygodniu?</div></div>
+              <input class="form-input" type="number" min="1" id="dashboard-goal-profile-input" value="4" style="width:70px;padding:6px 8px;" onchange="updateDashboardGoal(this.value)">
+            </div>
+            <div class="list-item">
+              <div class="list-text"><div class="list-title">Przerwa — wielostawowe</div></div>
+              <select class="form-input" style="width:90px;padding:6px 8px;" id="rest-compound" onchange="saveSettings()"><option value="60">60s</option><option value="90" selected>90s</option><option value="120">120s</option><option value="180">180s</option></select>
+            </div>
+            <div class="list-item">
+              <div class="list-text"><div class="list-title">Przerwa — izolacja</div></div>
+              <select class="form-input" style="width:90px;padding:6px 8px;" id="rest-isolation" onchange="saveSettings()"><option value="30">30s</option><option value="45">45s</option><option value="60" selected>60s</option><option value="90">90s</option></select>
+            </div>
+            <div class="list-item">
+              <div class="list-text"><div class="list-title">Przerwa — brzuch</div></div>
+              <select class="form-input" style="width:90px;padding:6px 8px;" id="rest-abs" onchange="saveSettings()"><option value="30">30s</option><option value="45" selected>45s</option><option value="60">60s</option></select>
+            </div>
+            <div class="list-item">
+              <div class="list-text"><div class="list-title">Wibracje</div></div>
+              <button class="toggle on" id="vibration-toggle" onclick="toggleVibration(this)"></button>
+            </div>
+            <div class="list-item">
+              <div class="list-text"><div class="list-title">Dźwięk</div></div>
+              <button class="toggle on" id="sound-toggle" onclick="toggleSound(this)"></button>
+            </div>
+            <div class="list-item">
+              <div class="list-text"><div class="list-title">Powiadomienia treningowe</div><div class="list-sub" id="notif-setting-sub">Co 2 dni · 9:00</div></div>
+              <button class="toggle" id="notif-toggle" onclick="toggleNotifications(this)"></button>
+            </div>
+            <div class="list-item" id="notif-freq-row" style="display:none;">
+              <div class="list-text"><div class="list-title">Częstotliwość</div></div>
+              <select class="form-input" style="width:110px;padding:6px 8px;" id="notif-freq" onchange="saveNotifSettings()">
+                <option value="1">Codziennie</option>
+                <option value="2" selected>Co 2 dni</option>
+                <option value="3">Co 3 dni</option>
+                <option value="7">Co tydzień</option>
+              </select>
+            </div>
+            <div class="list-item" id="notif-hour-row" style="display:none;">
+              <div class="list-text"><div class="list-title">Godzina przypomnienia</div></div>
+              <input type="time" class="form-input" style="width:110px;padding:6px 8px;" id="notif-hour" value="09:00" onchange="saveNotifSettings()">
+            </div>
+            <div class="list-item">
+              <div class="list-text"><div class="list-title">💧 Przypomnienie o wodzie</div><div class="list-sub" id="water-notif-sub">Co 60 min</div></div>
+              <button class="toggle" id="water-notif-toggle" onclick="toggleWaterNotif(this)"></button>
+            </div>
+            <div class="list-item" id="water-notif-interval-row" style="display:none;">
+              <div class="list-text"><div class="list-title">Interwał przypomnienia</div></div>
+              <select class="form-input" style="width:110px;padding:6px 8px;" id="water-notif-interval" onchange="saveWaterNotifSettings()">
+                <option value="30">30 min</option>
+                <option value="60" selected>60 min</option>
+                <option value="90">90 min</option>
+                <option value="120">120 min</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title collapsible-header" onclick="toggleProfileExport()"><span>Dane</span><span class="collapse-chevron" id="profile-export-chevron">›</span></div>
+        <div class="profile-data-body open" id="profile-export-body">
+          <div class="list-group" style="margin:0;">
+            <div class="list-item" onclick="exportData()"><div class="list-icon" style="background:rgba(48,209,88,.15);">📤</div><div class="list-text"><div class="list-title">Eksportuj dane</div></div><div class="list-chevron">›</div></div>
+            <div class="list-item" onclick="document.getElementById('import-file').click()"><div class="list-icon" style="background:rgba(10,132,255,.15);">📥</div><div class="list-text"><div class="list-title">Importuj dane</div></div><div class="list-chevron">›</div></div>
+            <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importData(this)">
+            <div class="list-item" onclick="createBackup()"><div class="list-icon" style="background:rgba(48,209,88,.15);">💾</div><div class="list-text"><div class="list-title">Utwórz kopię zapasową</div><div class="list-sub">Pełny backup całej aplikacji</div></div><div class="list-chevron">›</div></div>
+            <div class="list-item" onclick="document.getElementById('restore-file').click()"><div class="list-icon" style="background:rgba(255,159,10,.15);">📂</div><div class="list-text"><div class="list-title">Przywróć kopię zapasową</div><div class="list-sub">Wczytaj plik backup</div></div><div class="list-chevron">›</div></div>
+            <input type="file" id="restore-file" accept=".json" style="display:none;" onchange="restoreBackup(this)">
+            <div class="list-item" onclick="if(confirm('Na pewno?'))clearData()"><div class="list-icon" style="background:rgba(255,69,58,.15);">🗑</div><div class="list-text"><div class="list-title" style="color:var(--red);">Wyczyść dane</div></div><div class="list-chevron">›</div></div>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;padding:24px;color:var(--text4);font-size:12px;">GymFlow v2.0.0 </div>
     </div>
+
   </div><!-- #content -->
 </div><!-- #app -->
 
@@ -544,7 +617,6 @@
 <div class="sheet" id="body-measurements-sheet">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
-    <button class="btn btn-ghost" style="padding:0;" onclick="closeAllSheets()">✕</button>
     <div class="sheet-title">📏 Pomiary</div>
     <button class="btn btn-ghost" style="padding:0;" onclick="saveBodyMeasurements()">Zapisz</button>
   </div>
@@ -645,7 +717,6 @@ let state = {
 <script src="js/body_measurements.js"></script>
 <script src="js/hydration.js"></script>
 <script src="js/seasons.js"></script>
-<script src="js/wiecej.js"></script>
 <script src="js/app.js"></script>
 <script src="js/animations.js"></script>
 <script>init();</script>
