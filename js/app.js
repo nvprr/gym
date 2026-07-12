@@ -18,6 +18,9 @@ async function init(){
     checkAchievements(false);
   }
 
+  // Fix: second refresh ensures dashboard renders after all CSS/fonts loaded
+  setTimeout(function(){ refreshDashboard(); }, 100);
+
   // Seed sample plan
   if(!state.plans.length){
     state.plans.push({id:uid(),name:'Push Pull Legs',emoji:'🔥',days:[
