@@ -487,9 +487,9 @@ function renderWiecejDane(el) {
   el.innerHTML =
     '<div style="padding:0 16px;"><div class="card" style="padding:0;overflow:hidden;">'
     + '<div class="list-item" onclick="exportData()" style="cursor:pointer;"><div class="list-icon" style="background:rgba(48,209,88,.15);">📤</div><div class="list-text"><div class="list-title">Eksportuj dane</div></div><div class="list-chevron">›</div></div>'
-    + '<div class="list-item" onclick="document.getElementById(\'import-file\').click()" style="cursor:pointer;"><div class="list-icon" style="background:rgba(10,132,255,.15);">📥</div><div class="list-text"><div class="list-title">Importuj dane</div></div><div class="list-chevron">›</div></div>'
+    + '<div class="list-item" onclick="importData_trigger()" style="cursor:pointer;"><div class="list-icon" style="background:rgba(10,132,255,.15);">📥</div><div class="list-text"><div class="list-title">Importuj dane</div></div><div class="list-chevron">›</div></div>'
     + '<div class="list-item" onclick="createBackup()" style="cursor:pointer;"><div class="list-icon" style="background:rgba(48,209,88,.15);">💾</div><div class="list-text"><div class="list-title">Utwórz kopię zapasową</div><div class="list-sub">Pełny backup</div></div><div class="list-chevron">›</div></div>'
-    + '<div class="list-item" onclick="document.getElementById(\'restore-file\').click()" style="cursor:pointer;"><div class="list-icon" style="background:rgba(255,159,10,.15);">📂</div><div class="list-text"><div class="list-title">Przywróć kopię zapasową</div></div><div class="list-chevron">›</div></div>'
+    + '<div class="list-item" onclick="restoreBackup_trigger()" style="cursor:pointer;"><div class="list-icon" style="background:rgba(255,159,10,.15);">📂</div><div class="list-text"><div class="list-title">Przywróć kopię zapasową</div></div><div class="list-chevron">›</div></div>'
     + '<div class="list-item" onclick="if(confirm(\'Na pewno?\'))clearData()" style="cursor:pointer;"><div class="list-icon" style="background:rgba(255,69,58,.15);">🗑</div><div class="list-text"><div class="list-title" style="color:var(--red);">Wyczyść dane</div></div><div class="list-chevron">›</div></div>'
     + '</div></div>';
 }
