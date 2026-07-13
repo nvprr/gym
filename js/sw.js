@@ -1,7 +1,7 @@
 // ===================== SW.JS =====================
-// GymFlow Service Worker — cache + powiadomienia
+// GymFlow Service Worker — cache + update detection + powiadomienia
 
-var CACHE_NAME = 'gymflow-v2';
+var CACHE_NAME = 'gymflow-v3';
 var CACHE_FILES = [
   '/gym/',
   '/gym/index.html',
@@ -32,45 +32,37 @@ var CACHE_FILES = [
   '/gym/icons/icon-512.png',
 ];
 
-// Instalacja — zapisz pliki w cache
 self.addEventListener('install', function(e) {
   e.waitUntil(
     caches.open(CACHE_NAME).then(function(cache) {
       return cache.addAll(CACHE_FILES).catch(function(err) {
-        console.warn('Cache addAll partial fail:', err);
+        console.warn('Cache partial fail:', err);
       });
     })
   );
-  self.skipWaiting();
+  // Don't skipWaiting here — wait for user to click "Aktualizuj"
 });
 
-// Aktywacja — usuń stare cache
 self.addEventListener('activate', function(e) {
   e.waitUntil(
     caches.keys().then(function(keys) {
       return Promise.all(
-        keys.filter(function(key) { return key !== CACHE_NAME; })
-            .map(function(key) { return caches.delete(key); })
+        keys.filter(function(k) { return k !== CACHE_NAME; })
+            .map(function(k) { return caches.delete(k); })
       );
-    }).then(function() {
-      return self.clients.claim();
-    })
+    }).then(function() { return self.clients.claim(); })
   );
 });
 
-// Fetch — sieć najpierw, cache jako fallback
+// Network first, cache fallback
 self.addEventListener('fetch', function(e) {
   if (e.request.method !== 'GET') return;
   e.respondWith(
     fetch(e.request).then(function(response) {
-      // Zapisz świeżą wersję w cache
       var clone = response.clone();
-      caches.open(CACHE_NAME).then(function(cache) {
-        cache.put(e.request, clone);
-      });
+      caches.open(CACHE_NAME).then(function(cache) { cache.put(e.request, clone); });
       return response;
     }).catch(function() {
-      // Offline — użyj cache
       return caches.match(e.request).then(function(cached) {
         return cached || caches.match('/gym/index.html');
       });
@@ -78,19 +70,20 @@ self.addEventListener('fetch', function(e) {
   );
 });
 
-// ── Timer notifications ──
+// Message from app
 self.addEventListener('message', function(e) {
   if (!e.data) return;
+
+  // User clicked "Aktualizuj" — activate new SW immediately
+  if (e.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+
+  // Timer notifications
   if (e.data.type === 'TIMER_NOTIFICATION') {
     if (self._timerTimeout) clearTimeout(self._timerTimeout);
     var delay = e.data.delay || 0;
-    if (delay <= 0) {
-      showTimerNotification();
-    } else {
-      self._timerTimeout = setTimeout(function() {
-        showTimerNotification();
-      }, delay);
-    }
+    self._timerTimeout = setTimeout(showTimerNotification, delay);
   }
   if (e.data.type === 'CANCEL_TIMER_NOTIFICATION') {
     if (self._timerTimeout) { clearTimeout(self._timerTimeout); self._timerTimeout = null; }
