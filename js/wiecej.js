@@ -23,7 +23,8 @@ function showWiecej(section) {
     sezony:      '🌸 Sezony',
     wrapped:     '🎉 GymFlow Wrapped',
     ustawienia:  '⚙️ Ustawienia',
-    dane:        '💾 Dane'
+    dane:        '💾 Dane',
+    changelog:   '📜 Historia zmian'
   };
   title.textContent = titles[section] || '';
 
@@ -34,6 +35,7 @@ function showWiecej(section) {
   else if (section === 'wrapped')     renderWiecejWrapped(content);
   else if (section === 'ustawienia')  renderWiecejUstawienia(content);
   else if (section === 'dane')        renderWiecejDane(content);
+  else if (section === 'changelog')   renderWiecejChangelog(content);
 }
 
 function hideWiecej() {
@@ -492,4 +494,87 @@ function renderWiecejDane(el) {
     + '<div class="list-item" onclick="restoreBackup_trigger()" style="cursor:pointer;"><div class="list-icon" style="background:rgba(255,159,10,.15);">📂</div><div class="list-text"><div class="list-title">Przywróć kopię zapasową</div></div><div class="list-chevron">›</div></div>'
     + '<div class="list-item" onclick="if(confirm(\'Na pewno?\'))clearData()" style="cursor:pointer;"><div class="list-icon" style="background:rgba(255,69,58,.15);">🗑</div><div class="list-text"><div class="list-title" style="color:var(--red);">Wyczyść dane</div></div><div class="list-chevron">›</div></div>'
     + '</div></div>';
+}
+
+// ── CHANGELOG ──
+var CHANGELOG = [
+  {
+    version: '2.1.0',
+    date: '2025-07-13',
+    changes: [
+      '✨ Zakładka Więcej — nowe kafelki nawigacji',
+      '✨ Changelog — historia zmian aplikacji',
+      '🔔 Baner aktualizacji przy nowej wersji',
+      '🔧 Naprawiono PR — teraz używa estymacji 1RM',
+      '🔧 Naprawiono dodawanie celów treningowych',
+      '⏱️ Minimalizacja timera przerwy',
+      '🔧 Naprawiono przywracanie kopii zapasowej',
+    ]
+  },
+  {
+    version: '2.0.0',
+    date: '2025-06-28',
+    changes: [
+      '✨ Sezony — podział roku na Wiosnę/Lato/Jesień/Zimę',
+      '✨ GymFlow Wrapped — roczne podsumowanie',
+      '✨ System motywów kolorystycznych (7 kolorów)',
+      '✨ Tryb Jasny / Ciemny / Auto',
+      '✨ Nawodnienie — karta na dashboardzie',
+      '✨ Backup & Restore — pełna kopia zapasowa',
+      '✨ Przypomnienia o wodzie',
+      '🔧 Animacje SVG ringa nawodnienia',
+      '🔧 Naprawiono drugie uruchomienie treningu',
+    ]
+  },
+  {
+    version: '1.6.0',
+    date: '2025-05-01',
+    changes: [
+      '✨ Pomiary ciała — waga, wzrost i wymiary',
+      '✨ Usuwanie treningów z historii',
+      '✨ Ikony PNG dla osiągnięć',
+      '✨ Wykresy SVG w Progress',
+      '🔧 Naprawiono zapis profilu użytkownika',
+    ]
+  },
+  {
+    version: '1.0.0',
+    date: '2025-01-01',
+    changes: [
+      '🎉 Pierwsza wersja GymFlow',
+      '✨ Dashboard z kartami',
+      '✨ Plany treningowe',
+      '✨ Historia treningów',
+      '✨ MuscleMap',
+      '✨ Osiągnięcia',
+      '✨ Progress & Statystyki',
+    ]
+  },
+];
+
+function renderWiecejChangelog(el) {
+  var lastSeen = localStorage.getItem('gymflow_last_version') || '';
+  var latest = CHANGELOG[0].version;
+  localStorage.setItem('gymflow_last_version', latest);
+
+  var html = '<div style="padding:0 16px;">';
+  CHANGELOG.forEach(function(entry, i) {
+    var isNew = i === 0 && lastSeen !== latest && lastSeen !== '';
+    html += '<div class="card" style="margin-bottom:10px;padding:0;overflow:hidden;">';
+    html += '<div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'block\':\'none\'" style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;">';
+    html += '<div style="display:flex;align-items:center;gap:8px;">';
+    html += '<span style="font-size:15px;font-weight:800;">v'+entry.version+'</span>';
+    if (isNew) html += '<span style="background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;">NOWE</span>';
+    html += '</div>';
+    html += '<span style="font-size:12px;color:var(--text3);">'+entry.date+'</span>';
+    html += '</div>';
+    html += '<div style="display:'+(i===0?'block':'none')+';padding:0 16px 14px;">';
+    entry.changes.forEach(function(c) {
+      html += '<div style="font-size:13px;padding:4px 0;color:var(--text2);">'+c+'</div>';
+    });
+    html += '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
 }

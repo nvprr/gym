@@ -41,6 +41,8 @@ function computeAllRecords() {
           maxReps: 0, maxRepsDate: null,
           maxTonnage: 0, maxTonnageDate: null,
           maxSets: 0, maxSetsDate: null,
+          maxE1RM: 0, maxE1RMDate: null,
+          bestWeight: 0, bestReps: 0,
           totalSets: 0, totalTonnage: 0, count: 0
         };
       }
@@ -52,6 +54,14 @@ function computeAllRecords() {
         var rp = parseInt(s.reps) || 0;
         if (w2 > r.maxWeight) { r.maxWeight = w2; r.maxWeightDate = wDate; }
         if (rp > r.maxReps)   { r.maxReps = rp;   r.maxRepsDate = wDate; }
+        // 1RM estimate (Epley)
+        var e1rm = w2 * (1 + rp / 30);
+        if (e1rm > r.maxE1RM) {
+          r.maxE1RM = e1rm;
+          r.maxE1RMDate = wDate;
+          r.bestWeight = w2;
+          r.bestReps = rp;
+        }
       });
       if (exTonnage > r.maxTonnage) { r.maxTonnage = exTonnage; r.maxTonnageDate = wDate; }
       if (doneSets.length > r.maxSets) { r.maxSets = doneSets.length; r.maxSetsDate = wDate; }
@@ -319,7 +329,7 @@ function renderRecords() {
     var q = recordsSearch.toLowerCase();
     arr = arr.filter(function(r){ return r.name.toLowerCase().indexOf(q) !== -1; });
   }
-  arr.sort(function(a,b){ return b.maxWeight - a.maxWeight; });
+  arr.sort(function(a,b){ return b.maxE1RM - a.maxE1RM; });
   var now = Date.now();
   var el = document.getElementById('records-list');
   if (!arr.length) {
@@ -327,7 +337,7 @@ function renderRecords() {
     return;
   }
   el.innerHTML = arr.map(function(r) {
-    var isNew = r.maxWeightDate && (now - r.maxWeightDate.getTime()) < 7*86400000;
+    var isNew = r.maxE1RMDate && (now - r.maxE1RMDate.getTime()) < 7*86400000;
     var def = getAllExercises().find(function(e){ return e.id===r.id; });
     var shortName = r.name.length > 35 ? r.name.slice(0,33)+'…' : r.name;
     return '<div class="record-card" onclick="showRecordDetail(' + JSON.stringify(r.id) + ')">' +
@@ -335,8 +345,8 @@ function renderRecords() {
       '<div class="record-name">' + shortName + '</div>' +
       '<div style="font-size:11px;color:var(--text4);margin-bottom:6px;">' + (def?def.muscle:'') + '</div>' +
       '<div class="record-badges">' +
-        '<div class="record-badge gold">⚖️ ' + (r.maxWeight||'—') + 'kg</div>' +
-        '<div class="record-badge">🔄 ' + (r.maxReps||'—') + ' powt.</div>' +
+        '<div class="record-badge gold">⚖️ ' + (r.bestWeight||r.maxWeight||'—') + 'kg × ' + (r.bestReps||'—') + '</div>' +
+        '<div class="record-badge">🏋️ 1RM ~' + Math.round(r.maxE1RM||0) + 'kg</div>' +
         '<div class="record-badge">📊 ' + r.totalSets + ' serii</div>' +
         '<div class="record-badge">🏋️ ' + Math.round(r.maxTonnage) + 'kg tonaż</div>' +
       '</div>' +

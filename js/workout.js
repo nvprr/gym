@@ -254,21 +254,35 @@ function updateStopwatch(){
   if(miniStats) miniStats.textContent=workoutState.totalSets+' serii · '+workoutState.totalTonnage.toFixed(0)+'kg';
 }
 
-function checkPR(ex,weight,reps){
-  if(!weight||!reps)return;
-  var found=false;
-  state.workouts.forEach(function(w){
-    if(found)return;
-    (w.exercises||[]).forEach(function(we){
-      if(we.id!==ex.id)return;
-      (we.sets||[]).forEach(function(s){
-        if(s.done&&parseFloat(s.weight)>=weight&&parseInt(s.reps)>=reps) found=true;
+function calcE1RM(weight, reps) {
+  // Epley formula: weight * (1 + reps/30)
+  return parseFloat(weight) * (1 + parseInt(reps) / 30);
+}
+
+function checkPR(ex, weight, reps) {
+  if (!weight || !reps) return;
+  var newE1RM = calcE1RM(weight, reps);
+
+  // Find best historical e1RM for this exercise
+  var bestE1RM = 0;
+  var hasHistory = false;
+  state.workouts.forEach(function(w) {
+    (w.exercises || []).forEach(function(we) {
+      if (we.id !== ex.id) return;
+      hasHistory = true;
+      (we.sets || []).forEach(function(s) {
+        if (s.done && s.weight && s.reps) {
+          var e1rm = calcE1RM(s.weight, s.reps);
+          if (e1rm > bestE1RM) bestE1RM = e1rm;
+        }
       });
     });
   });
-  if(found) return;
-  var hasHistory=state.workouts.some(function(w){return (w.exercises||[]).some(function(e){return e.id===ex.id;});});
-  if(hasHistory) showPRCelebration(ex.name,weight,reps);
+
+  if (!hasHistory) return;
+  if (newE1RM > bestE1RM) {
+    showPRCelebration(ex.name, weight, reps);
+  }
 }
 
 function showPRCelebration(name,weight,reps){
