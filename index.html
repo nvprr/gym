@@ -675,21 +675,21 @@ let state = {
         var newSW = reg.installing;
         newSW.addEventListener('statechange', function() {
           if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-            // New version ready — show banner
-            document.getElementById('update-banner').style.display = 'block';
+            // New version ready — show banner, wait for user click
             window._newSW = newSW;
+            document.getElementById('update-banner').style.display = 'block';
           }
         });
       });
     });
-    // When SW activates after update — reload
-    var refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', function() {
-      if (!refreshing) { refreshing = true; window.location.reload(); }
-    });
   }
   function applyUpdate() {
+    document.getElementById('update-banner').style.display = 'none';
     if (window._newSW) {
+      // Tell SW to skip waiting, then reload when it takes control
+      navigator.serviceWorker.addEventListener('controllerchange', function() {
+        window.location.reload();
+      });
       window._newSW.postMessage({ type: 'SKIP_WAITING' });
     } else {
       window.location.reload();

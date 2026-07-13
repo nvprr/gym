@@ -1,13 +1,10 @@
 // ===================== SW.JS =====================
 // GymFlow Service Worker — cache + update detection + powiadomienia
 
-var CACHE_NAME = 'gymflow-v2.1.1';
+var CACHE_NAME = 'gymflow-v2.1.2';
 var CACHE_FILES = [
   '/gym/',
   '/gym/index.html',
-  '/gym/app.js',
-  '/gym/sw.js',
-  '/gym/manifest.json',
   '/gym/css/style.css',
   '/gym/css/animations.css',
   '/gym/js/db.js',
@@ -28,7 +25,9 @@ var CACHE_FILES = [
   '/gym/js/hydration.js',
   '/gym/js/seasons.js',
   '/gym/js/wiecej.js',
+  '/gym/js/app.js',
   '/gym/js/animations.js',
+  '/gym/manifest.json',
   '/gym/icons/icon-192.png',
   '/gym/icons/icon-512.png',
 ];
