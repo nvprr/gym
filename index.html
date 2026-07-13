@@ -19,6 +19,10 @@
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/animations.css">
 <style>
+#update-banner{display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:var(--accent);color:#fff;padding:12px 16px;text-align:center;font-size:14px;font-weight:600;box-shadow:0 2px 12px rgba(0,0,0,.3);}
+#update-banner button{background:rgba(255,255,255,.25);border:none;color:#fff;padding:6px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-left:10px;}
+</style>
+<style>
 /* Wykresy — brakujący CSS */
 .chart-wrap{margin-bottom:16px}
 .bar-chart{display:flex;align-items:flex-end;gap:3px;height:80px;background:var(--surface2);border-radius:10px;padding:8px 8px 0;overflow:hidden}
@@ -27,6 +31,10 @@
 </style>
 </head>
 <body>
+<div id="update-banner">
+  🆕 Dostępna nowa wersja GymFlow!
+  <button onclick="applyUpdate()">Aktualizuj</button>
+</div>
 <div id="app">
   <nav id="tabbar">
     <button class="tab-btn active" onclick="showTab('dashboard')"><span class="tab-icon">🏠</span><span class="tab-label">Dashboard</span></button>
@@ -544,7 +552,6 @@
 <div class="sheet" id="body-measurements-sheet">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
-    <button class="btn btn-ghost" style="padding:0;" onclick="closeAllSheets()">✕</button>
     <div class="sheet-title">📏 Pomiary</div>
     <button class="btn btn-ghost" style="padding:0;" onclick="saveBodyMeasurements()">Zapisz</button>
   </div>
@@ -648,7 +655,36 @@ let state = {
 <script src="js/wiecej.js"></script>
 <script src="js/app.js"></script>
 <script src="js/animations.js"></script>
-<script>init();</script>
+<script>
+  // SW registration + update detection
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/gym/sw.js').then(function(reg) {
+      reg.addEventListener('updatefound', function() {
+        var newSW = reg.installing;
+        newSW.addEventListener('statechange', function() {
+          if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+            // New version ready — show banner
+            document.getElementById('update-banner').style.display = 'block';
+            window._newSW = newSW;
+          }
+        });
+      });
+    });
+    // When SW activates after update — reload
+    var refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function() {
+      if (!refreshing) { refreshing = true; window.location.reload(); }
+    });
+  }
+  function applyUpdate() {
+    if (window._newSW) {
+      window._newSW.postMessage({ type: 'SKIP_WAITING' });
+    } else {
+      window.location.reload();
+    }
+  }
+  init();
+</script>
 <!-- File inputs at body level for iOS compatibility -->
 <input type="file" id="import-file"  accept=".json" style="position:fixed;top:-9999px;opacity:0;" onchange="importData(this)">
 <input type="file" id="restore-file" accept=".json" style="position:fixed;top:-9999px;opacity:0;" onchange="restoreBackup(this)">
