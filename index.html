@@ -286,6 +286,9 @@
         <button onclick="showWiecej('dane')" style="background:var(--surface);border:none;border-radius:16px;padding:16px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;">
           <span style="font-size:26px;">💾</span><span style="font-size:11px;font-weight:600;color:var(--text2);">Dane</span>
         </button>
+        <button onclick="showWiecej('changelog')" style="background:var(--surface);border:none;border-radius:16px;padding:16px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;">
+          <span style="font-size:26px;">📜</span><span style="font-size:11px;font-weight:600;color:var(--text2);">Zmiany</span>
+        </button>
       </div>
 
       <!-- POD-WIDOK -->
@@ -403,9 +406,18 @@
   </div>
   <div class="timer-controls">
     <button class="timer-ctrl-btn" id="timer-pause-btn" onclick="toggleTimerPause()">⏸ Pauza</button>
+    <button class="timer-ctrl-btn" onclick="minimizeTimer()">▼ Minimalizuj</button>
     <button class="timer-ctrl-btn" onclick="skipTimer()">⏭ Pomiń</button>
   </div>
   <div id="timer-set-info" style="margin-top:12px;font-size:13px;color:var(--text3);text-align:center;"></div>
+</div>
+
+<!-- TIMER MINI BAR -->
+<div id="timer-mini-bar" style="display:none;position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:1100;background:var(--surface);border-radius:16px;padding:10px 16px;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,.4);border:1px solid var(--border2);min-width:220px;">
+  <span style="font-size:18px;">⏱</span>
+  <span id="timer-mini-display" style="font-size:18px;font-weight:800;color:var(--accent);flex:1;">1:30</span>
+  <button onclick="maximizeTimer()" style="background:var(--surface2);border:none;color:var(--text);border-radius:10px;padding:6px 12px;font-size:13px;cursor:pointer;">▲ Pokaż</button>
+  <button onclick="skipTimer()" style="background:rgba(255,69,58,.12);border:none;color:var(--red);border-radius:10px;padding:6px 12px;font-size:13px;cursor:pointer;">✕</button>
 </div>
 
 <!-- PR CELEBRATION -->
@@ -692,5 +704,30 @@ let state = {
 function importData_trigger()  { document.getElementById('import-file').value='';  document.getElementById('import-file').click(); }
 function restoreBackup_trigger(){ document.getElementById('restore-file').value=''; document.getElementById('restore-file').click(); }
 </script>
+<div class="sheet" id="goal-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <button class="btn btn-ghost" style="padding:0;" onclick="closeAllSheets()">✕</button>
+    <div class="sheet-title">🎯 Nowy cel</div>
+    <button class="btn btn-ghost" style="padding:0;" onclick="saveGoal()">Zapisz</button>
+  </div>
+  <div class="sheet-body">
+    <div class="form-group"><label class="form-label">Opis celu</label><input class="form-input" id="goal-desc-input" placeholder="np. Osiągnąć 100kg na ławce"></div>
+    <div class="form-group"><label class="form-label">Typ</label>
+      <select class="form-input" id="goal-type-input">
+        <option value="workouts">Liczba treningów</option>
+        <option value="tonnage">Tonaż (kg)</option>
+        <option value="sets">Serie</option>
+        <option value="reps">Powtórzenia</option>
+        <option value="days">Aktywne dni</option>
+        <option value="hours">Godziny</option>
+        <option value="weight">Ciężar w ćwiczeniu</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">Wartość docelowa</label><input class="form-input" type="number" id="goal-target-input" placeholder="100"></div>
+    <div class="form-group" id="goal-ex-row" style="display:none;"><label class="form-label">Ćwiczenie</label><input class="form-input" id="goal-ex-input" placeholder="np. Bench Press"></div>
+  </div>
+</div>
+
 </body>
 </html>
