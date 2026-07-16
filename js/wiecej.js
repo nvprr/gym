@@ -500,7 +500,7 @@ function renderWiecejDane(el) {
 var CHANGELOG = [
   {
     version: '2.1.0',
-    date: '2025-07-13',
+    date: '2026-07-13',
     changes: [
       '✨ Zakładka Więcej — nowe kafelki nawigacji',
       '✨ Changelog — historia zmian aplikacji',
@@ -513,7 +513,7 @@ var CHANGELOG = [
   },
   {
     version: '2.0.0',
-    date: '2025-06-28',
+    date: '2026-06-28',
     changes: [
       '✨ Sezony — podział roku na Wiosnę/Lato/Jesień/Zimę',
       '✨ GymFlow Wrapped — roczne podsumowanie',
@@ -528,7 +528,7 @@ var CHANGELOG = [
   },
   {
     version: '1.6.0',
-    date: '2025-05-01',
+    date: '2026-06-24',
     changes: [
       '✨ Pomiary ciała — waga, wzrost i wymiary',
       '✨ Usuwanie treningów z historii',
@@ -539,7 +539,7 @@ var CHANGELOG = [
   },
   {
     version: '1.0.0',
-    date: '2025-01-01',
+    date: '2026-06-25',
     changes: [
       '🎉 Pierwsza wersja GymFlow',
       '✨ Dashboard z kartami',
