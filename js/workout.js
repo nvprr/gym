@@ -103,6 +103,8 @@ function renderTrainingView(){
     html+='<div style="flex:1;"><div class="exercise-name">'+ex.name+'</div>';
     html+='<div class="exercise-meta">'+(ex.reps||'—')+' powt. · '+(ex.restTime==='default'?'domyślna':ex.restTime+'s')+'</div></div>';
     if(allDone) html+='<span style="font-size:22px;margin-left:4px;">✅</span>';
+    html+='<button onclick="openExerciseDetail(\''+ex.id+'\')" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:4px 6px;">ℹ️</button>';
+    html+='<button onclick="removeExFromWorkout('+ei+')" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:4px 6px;">🗑</button>';
     html+='</div>';
     if(suggestion) html+='<div style="padding:0 16px 8px;font-size:12px;color:var(--accent)">'+suggestion+'</div>';
     if(ex.note) html+='<div style="padding:0 16px 8px;font-size:12px;color:var(--text3);">📝 '+ex.note+'</div>';

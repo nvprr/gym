@@ -13,6 +13,7 @@ function renderPlans(){
       <div class="plan-actions">
         <button class="plan-action-btn" onclick="editPlan(${i})">✏️ Edytuj</button>
         <button class="plan-action-btn" onclick="copyPlan(${i})">📋 Kopiuj</button>
+        <button class="plan-action-btn" onclick="showPlanAnalysis('${p.id}')">📊 Analizuj</button>
         <button class="plan-action-btn" onclick="deletePlan(${i})">🗑 Usuń</button>
       </div>
     </div>`;
