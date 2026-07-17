@@ -24,7 +24,8 @@ function showWiecej(section) {
     wrapped:     '🎉 GymFlow Wrapped',
     ustawienia:  '⚙️ Ustawienia',
     dane:        '💾 Dane',
-    changelog:   '📜 Historia zmian'
+    changelog:   '📜 Historia zmian',
+    biblioteka:  '📚 Biblioteka ćwiczeń'
   };
   title.textContent = titles[section] || '';
 
@@ -36,6 +37,7 @@ function showWiecej(section) {
   else if (section === 'ustawienia')  renderWiecejUstawienia(content);
   else if (section === 'dane')        renderWiecejDane(content);
   else if (section === 'changelog')   renderWiecejChangelog(content);
+  else if (section === 'biblioteka')  renderWiecejBiblioteka(content);
 }
 
 function hideWiecej() {
@@ -499,6 +501,16 @@ function renderWiecejDane(el) {
 // ── CHANGELOG ──
 var CHANGELOG = [
   {
+    version: '2.1.4',
+    date: '2025-07-17',
+    changes: [
+      '✨ Biblioteka ćwiczeń — przeglądaj wszystkie 480+ ćwiczeń z opisami',
+      '⭐ System ulubionych ćwiczeń',
+      '🔍 Wyszukiwanie i filtrowanie po partii mięśniowej',
+      '📜 Changelog — historia zmian',
+    ]
+  },
+  {
     version: '2.1.0',
     date: '2026-07-13',
     changes: [
@@ -577,4 +589,148 @@ function renderWiecejChangelog(el) {
   });
   html += '</div>';
   el.innerHTML = html;
+}
+
+// ── BIBLIOTEKA ĆWICZEŃ ──
+
+var _bibFilter = { muscle: 'all', search: '', fav: false };
+
+function renderWiecejBiblioteka(el) {
+  el.innerHTML =
+    '<div style="padding:0 16px;">'
+    // Wyszukiwarka
+    + '<div style="position:relative;margin-bottom:10px;">'
+    +   '<input id="bib-search" class="form-input" placeholder="🔍 Szukaj ćwiczenia..." style="padding-left:12px;"'
+    +   ' oninput="_bibFilter.search=this.value;renderBibList()">'
+    + '</div>'
+    // Filtry partii + ulubione
+    + '<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none;margin-bottom:4px;" id="bib-muscle-chips">'
+    +   _buildBibChips()
+    + '</div>'
+    // Lista
+    + '<div id="bib-list"></div>'
+    + '</div>';
+  renderBibList();
+}
+
+function _buildBibChips() {
+  var muscles = ['all','Klatka','Plecy','Barki','Biceps','Triceps','Nogi','Pośladki','Brzuch','Łydki'];
+  var labels  = ['Wszystkie','Klatka','Plecy','Barki','Biceps','Triceps','Nogi','Pośladki','Brzuch','Łydki'];
+  var html = '';
+  muscles.forEach(function(m, i) {
+    var active = m === _bibFilter.muscle ? ' active' : '';
+    html += '<button class="prog-tab'+active+'" onclick="setBibMuscle(\''+m+'\',this)">'+labels[i]+'</button>';
+  });
+  html += '<button class="prog-tab'+(_bibFilter.fav?' active':'')
+        + '" onclick="toggleBibFav(this)" style="white-space:nowrap;">⭐ Ulubione</button>';
+  return html;
+}
+
+function setBibMuscle(muscle, btn) {
+  _bibFilter.muscle = muscle;
+  _bibFilter.fav = false;
+  document.querySelectorAll('#bib-muscle-chips .prog-tab').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderBibList();
+}
+
+function toggleBibFav(btn) {
+  _bibFilter.fav = !_bibFilter.fav;
+  _bibFilter.muscle = 'all';
+  document.querySelectorAll('#bib-muscle-chips .prog-tab').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.toggle('active', _bibFilter.fav);
+  renderBibList();
+}
+
+function getBibFavs() {
+  try { return JSON.parse(localStorage.getItem('gymflow_fav_exercises') || '[]'); } catch(e) { return []; }
+}
+
+function saveBibFavs(favs) {
+  localStorage.setItem('gymflow_fav_exercises', JSON.stringify(favs));
+}
+
+function toggleExFav(id, btn) {
+  var favs = getBibFavs();
+  var idx = favs.indexOf(id);
+  if (idx > -1) { favs.splice(idx, 1); btn.textContent = '☆'; btn.style.color = 'var(--text4)'; }
+  else           { favs.push(id);       btn.textContent = '⭐'; btn.style.color = '#ffb753'; }
+  saveBibFavs(favs);
+  if (_bibFilter.fav) renderBibList();
+}
+
+function renderBibList() {
+  var listEl = document.getElementById('bib-list');
+  if (!listEl) return;
+
+  var favs = getBibFavs();
+  var all  = typeof getAllExercises === 'function' ? getAllExercises() : (typeof EXERCISES !== 'undefined' ? EXERCISES : []);
+  var list = all.filter(function(ex) {
+    if (_bibFilter.fav && favs.indexOf(ex.id) === -1) return false;
+    if (_bibFilter.muscle !== 'all' && ex.muscle !== _bibFilter.muscle) return false;
+    if (_bibFilter.search) {
+      var q = _bibFilter.search.toLowerCase();
+      return ex.name.toLowerCase().indexOf(q) !== -1
+          || (ex.muscle||'').toLowerCase().indexOf(q) !== -1
+          || (ex.sub||'').toLowerCase().indexOf(q) !== -1;
+    }
+    return true;
+  });
+
+  if (!list.length) {
+    listEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text4);">Brak ćwiczeń</div>';
+    return;
+  }
+
+  // Group by muscle
+  var groups = {};
+  list.forEach(function(ex) {
+    var m = ex.muscle || 'Inne';
+    if (!groups[m]) groups[m] = [];
+    groups[m].push(ex);
+  });
+
+  var muscleOrder = ['Klatka','Plecy','Barki','Biceps','Triceps','Nogi','Pośladki','Brzuch','Łydki','Inne'];
+  var html = '';
+  var usedOrder = _bibFilter.muscle !== 'all' ? [_bibFilter.muscle] : muscleOrder;
+
+  usedOrder.forEach(function(m) {
+    if (!groups[m] || !groups[m].length) return;
+    if (_bibFilter.muscle === 'all' && !_bibFilter.fav) {
+      html += '<div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;'
+            + 'letter-spacing:.5px;padding:12px 0 6px;">'+m+'</div>';
+    }
+    groups[m].forEach(function(ex) {
+      var isFav = favs.indexOf(ex.id) !== -1;
+      var levelColors = { 'łatwy':'var(--green)', 'średni':'var(--yellow)', 'zaawansowany':'var(--red)' };
+      var levelDots   = { 'łatwy':'🟢', 'średni':'🟡', 'zaawansowany':'🔴' };
+      html +=
+        '<div style="background:var(--surface2);border-radius:14px;padding:14px;margin-bottom:8px;cursor:pointer;"'
+        +' onclick="openBibDetail(\''+ex.id+'\')">'
+        +  '<div style="display:flex;align-items:flex-start;gap:8px;">'
+        +    '<div style="flex:1;">'
+        +      '<div style="font-weight:700;font-size:14px;margin-bottom:4px;">'+ex.name+'</div>'
+        +      '<div style="display:flex;gap:5px;flex-wrap:wrap;">'
+        +        '<span style="background:var(--accent-light);color:var(--accent);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600;">'+(ex.sub||ex.muscle)+'</span>'
+        +        (ex.aux||[]).slice(0,2).map(function(a){ return '<span style="background:var(--surface);border-radius:20px;padding:2px 8px;font-size:11px;color:var(--text3);">'+a+'</span>'; }).join('')
+        +        '<span style="font-size:11px;color:var(--text4);">'+(levelDots[ex.level]||'🟡')+' '+(ex.level||'')+'</span>'
+        +      '</div>'
+        +    '</div>'
+        +    '<button onclick="event.stopPropagation();toggleExFav(\''+ex.id+'\',this)"'
+        +     ' style="background:none;border:none;font-size:20px;cursor:pointer;padding:0 4px;color:'+(isFav?'#ffb753':'var(--text4)')+';">'
+        +      (isFav?'⭐':'☆')
+        +    '</button>'
+        +  '</div>'
+        +'</div>';
+    });
+  });
+
+  listEl.innerHTML = html;
+}
+
+function openBibDetail(exId) {
+  // Używa istniejącej funkcji z exercise_detail.js
+  if (typeof openExerciseDetail === 'function') {
+    openExerciseDetail(exId);
+  }
 }
