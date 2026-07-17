@@ -39,6 +39,14 @@ var MUSCLE_LABELS = {
   calves:        'Łydki',
 };
 
+// Display order for muscle bars (most important first)
+var MUSCLE_DISPLAY_ORDER = [
+  'chest','lats','quads','glutes','hamstrings',
+  'frontShoulder','midShoulder','rearShoulder',
+  'triceps','biceps','traps','lowerBack','abs',
+  'calves','forearms',
+];
+
 var LEVEL_BADGES = {
   'łatwy':        { emoji:'🟢', label:'Łatwe' },
   'średni':       { emoji:'🟡', label:'Średnie' },
@@ -203,60 +211,99 @@ var MUSCLE_GROUPS_MAP = {
 };
 
 function analyzePlan(plan) {
-  var muscleVolume = {};
+  var muscleVolume = {};   // weighted sets per muscle
+  var muscleSets = {};     // raw set count per muscle key
   var totalSets = 0;
   var totalExercises = 0;
-  var exIds = [];
 
   (plan.exercises||[]).forEach(function(ex) {
     var sets = parseInt(ex.sets)||3;
     totalSets += sets;
     totalExercises++;
-    exIds.push(ex.id);
 
     var exDef = getAllExercises().find(function(e){ return e.id===ex.id; });
     if (!exDef || !exDef.muscles) return;
 
-    Object.entries(exDef.muscles).forEach(function(entry) {
-      var key=entry[0], pct=entry[1];
-      // Weight contribution by involvement percentage
-      var contribution = sets * (pct/100);
-      muscleVolume[key] = (muscleVolume[key]||0) + contribution;
+    Object.keys(exDef.muscles).forEach(function(key) {
+      var pct = exDef.muscles[key];
+      // Only count muscles with >= 40% involvement as "real" volume
+      if (pct >= 40) {
+        var contribution = sets * (pct / 100);
+        muscleVolume[key] = (muscleVolume[key]||0) + contribution;
+        muscleSets[key] = (muscleSets[key]||0) + sets;
+      }
     });
   });
 
-  // Sort muscles by volume
-  var sorted = Object.entries(muscleVolume)
-    .sort(function(a,b){ return b[1]-a[1]; })
-    .map(function(entry) {
-      return {
-        key: entry[0],
-        label: MUSCLE_GROUPS_MAP[entry[0]] || entry[0],
-        volume: entry[1],
-        pct: Math.round(entry[1]/totalSets*100),
-      };
-    });
+  // Sort muscles by display order, then by volume
+  var allKeys = Object.keys(muscleVolume);
+  allKeys.sort(function(a, b) {
+    var oa = MUSCLE_DISPLAY_ORDER ? MUSCLE_DISPLAY_ORDER.indexOf(a) : 99;
+    var ob = MUSCLE_DISPLAY_ORDER ? MUSCLE_DISPLAY_ORDER.indexOf(b) : 99;
+    if (oa === -1) oa = 99;
+    if (ob === -1) ob = 99;
+    if (oa !== ob) return oa - ob;
+    return (muscleVolume[b]||0) - (muscleVolume[a]||0);
+  });
 
-  // Detect issues
+  var sorted = allKeys.map(function(key) {
+    return {
+      key: key,
+      label: MUSCLE_LABELS[key] || MUSCLE_GROUPS_MAP[key] || key,
+      volume: Math.round(muscleVolume[key] * 10) / 10,
+      sets: muscleSets[key] || 0,
+      pct: totalSets > 0 ? Math.round(muscleVolume[key] / totalSets * 100) : 0,
+    };
+  });
+
+  // ── Detect issues ──
   var warnings = [];
-  var allMuscles = Object.keys(MUSCLE_GROUPS_MAP);
-  var missing = allMuscles.filter(function(m){ return !muscleVolume[m] || muscleVolume[m] < 0.5; });
 
-  // Check balance
-  var quads = muscleVolume['quads']||0;
-  var hams  = muscleVolume['hamstrings']||0;
-  var chest = muscleVolume['chest']||0;
-  var back  = (muscleVolume['lats']||0) + (muscleVolume['upperBack']||0);
-  if (quads > hams*2) warnings.push('⚠️ Czworogłowe mają znacznie większą objętość niż dwugłowe uda.');
-  if (chest > back*1.5) warnings.push('⚠️ Klatka dominuje nad plecami — ryzyko dysbalansu.');
-  if ((muscleVolume['rearShoulder']||0) < 1) warnings.push('⚠️ Tylny akton barków ma bardzo małą objętość.');
+  var chest  = muscleVolume['chest']  || 0;
+  var lats   = muscleVolume['lats']   || 0;
+  var quads  = muscleVolume['quads']  || 0;
+  var hams   = muscleVolume['hamstrings'] || 0;
+  var glutes = muscleVolume['glutes'] || 0;
+  var rearS  = muscleVolume['rearShoulder'] || 0;
+  var frontS = muscleVolume['frontShoulder'] || 0;
+  var abs    = muscleVolume['abs']    || 0;
 
-  missing.forEach(function(m) {
-    var label = MUSCLE_GROUPS_MAP[m];
-    if (['calves','forearms','traps'].indexOf(m) === -1) {
-      warnings.push('⚠️ Brak ćwiczeń angażujących: '+label+'.');
+  // Push/Pull balance
+  var push = chest + frontS + (muscleVolume['triceps']||0);
+  var pull = lats + (muscleVolume['traps']||0) + (muscleVolume['biceps']||0);
+  if (push > 0 && pull > 0 && push > pull * 1.6)
+    warnings.push('⚠️ Push (klatka/barki) dominuje nad Pull (plecy) — ryzyko dysbalansu ramion.');
+  if (pull > 0 && push > 0 && pull > push * 1.6)
+    warnings.push('⚠️ Pull (plecy) dominuje nad Push — sprawdź czy to zamierzone.');
+
+  // Quad/Ham balance
+  if (quads > 0 && hams > 0 && quads > hams * 2.5)
+    warnings.push('⚠️ Czworogłowe mają znacznie większą objętość niż dwugłowe uda.');
+  if (quads > 0 && glutes > 0 && quads > glutes * 2)
+    warnings.push('⚠️ Dominacja czworogłowych — rozważ więcej ćwiczeń biodrowych (hip thrust, RDL).');
+
+  // Rear delt check
+  if (frontS > 0 && rearS < frontS * 0.4)
+    warnings.push('⚠️ Tylny akton barków słabo zaangażowany — dodaj facepull lub wznosy w opadzie.');
+
+  // Missing major groups (ignore minor accessories)
+  var majorGroups = {
+    chest: 'Klatka piersiowa',
+    lats: 'Najszerszy grzbiet (plecy)',
+    quads: 'Czworogłowe uda',
+    glutes: 'Pośladki',
+    abs: 'Brzuch / Core',
+  };
+  Object.keys(majorGroups).forEach(function(key) {
+    if (!muscleVolume[key] || muscleVolume[key] < 0.5) {
+      warnings.push('⚠️ Brak ćwiczeń angażujących: ' + majorGroups[key] + '.');
     }
   });
+
+  // Low volume warnings
+  if (abs > 0 && abs < 1.5) warnings.push('⚠️ Bardzo mało objętości na brzuch.');
+  if (rearS === 0 && (chest > 2 || frontS > 2))
+    warnings.push('⚠️ Brak ćwiczeń na tylny bark — kluczowe przy dużej ilości wyciskań.');
 
   if (!warnings.length) warnings.push('✅ Plan jest dobrze zbilansowany.');
 
@@ -305,13 +352,13 @@ function showPlanAnalysis(planId) {
   if (!analysis.muscles.length) {
     html += '<div style="font-size:13px;color:var(--text4);">Brak danych — przypisz ćwiczenia do planu.</div>';
   } else {
-    var maxVol = analysis.muscles[0].volume;
-    analysis.muscles.forEach(function(m) {
-      var barPct = Math.round(m.volume/maxVol*100);
+    var maxVol = Math.max.apply(null, analysis.muscles.map(function(m){ return m.volume; }));
+    analysis.muscles.filter(function(m){ return m.volume > 0; }).forEach(function(m) {
+      var barPct = maxVol > 0 ? Math.round(m.volume/maxVol*100) : 0;
       html += '<div style="margin-bottom:10px;">';
       html += '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">';
       html += '<span style="color:var(--text2);font-weight:600;">'+m.label+'</span>';
-      html += '<span style="color:var(--text3);">~'+m.volume.toFixed(1)+' serii · '+m.pct+'%</span>';
+      html += '<span style="color:var(--text3);">'+(m.sets||Math.round(m.volume))+' serii · '+m.pct+'%</span>';
       html += '</div>';
       html += '<div style="background:var(--surface2);border-radius:4px;height:8px;overflow:hidden;">';
       html += '<div style="width:'+barPct+'%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width .5s ease;"></div>';
