@@ -650,8 +650,250 @@ function calcStreak(){
 }
 
 function showWorkoutDetail(id){
-  const w=state.workouts.find(x=>x.id===id);if(!w)return;
-  const d=new Date(w.date);
-  alert([`📅 ${d.toLocaleDateString('pl')} · ${formatTime(w.duration||0)}`,`💪 ${w.exercises?.length||0} ćwiczeń · ${w.totalSets||0} serii`,`⚖️ Tonaż: ${(w.tonnage||0).toFixed(1)}kg`,w.note?`📝 ${w.note}`:''].filter(Boolean).join('\n'));
+  var w = state.workouts.find(function(x){ return x.id===id; });
+  if (!w) return;
+
+  var sheet = document.getElementById('workout-detail-sheet');
+  var body  = document.getElementById('workout-detail-body');
+  if (!sheet || !body) return;
+
+  var d = new Date(w.date);
+  var months = ['sty','lut','mar','kwi','maj','cze','lip','sie','wrz','paź','lis','gru'];
+  var dateStr = d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear();
+  var timeStr = ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+
+  // ── Oblicz e1RM dla każdego setu żeby wykryć rekordy ──
+  var allExercises = getAllExercises();
+  var muscleLabels = {
+    chest:'Klatka piersiowa', lats:'Najszerszy grzbiet', upperBack:'Górne plecy',
+    lowerBack:'Dolne plecy', traps:'Czworoboczny', frontShoulder:'Barki przednie',
+    midShoulder:'Barki boczne', rearShoulder:'Barki tylne', biceps:'Biceps',
+    triceps:'Triceps', forearms:'Przedramiona', abs:'Brzuch',
+    quads:'Czworogłowe uda', hamstrings:'Dwugłowe uda', glutes:'Pośladki', calves:'Łydki'
+  };
+
+  // Przelicz statystyki z serii
+  var totalReps = 0, totalSets = 0, totalTonnage = 0;
+  (w.exercises||[]).forEach(function(ex){
+    (ex.sets||[]).forEach(function(s){
+      if(!s.done) return;
+      totalSets++;
+      var r = parseInt(s.reps)||0;
+      var wt = parseFloat(s.weight)||0;
+      totalReps += r;
+      totalTonnage += r*wt;
+    });
+  });
+  totalTonnage = totalTonnage || w.tonnage || 0;
+  totalSets    = totalSets    || w.totalSets || 0;
+  totalReps    = totalReps    || w.totalReps || 0;
+
+  // ── Sekcja 1: Podsumowanie ──
+  var stats = [
+    { icon:'📅', label:'Data i godzina',       val: dateStr+' · '+timeStr },
+    { icon:'💪', label:'Plan treningowy',       val: (w.planName||'Trening')+(w.dayName?' — '+w.dayName:'') },
+    { icon:'⏱️', label:'Czas trwania',          val: formatTime(w.duration||0) },
+    { icon:'🏋️', label:'Ćwiczeń',              val: (w.exercises||[]).length },
+    { icon:'🔢', label:'Serie',                 val: totalSets },
+    { icon:'🔁', label:'Powtórzenia',           val: totalReps },
+    { icon:'⚖️', label:'Tonaż',                val: (totalTonnage).toFixed(1)+' kg' },
+  ];
+  if (w.rating) stats.push({ icon:'⭐', label:'Ocena treningu', val: w.rating+' / 10' });
+  if (w.note)   stats.push({ icon:'📝', label:'Notatka',        val: w.note });
+
+  var s1 = '<div class="card" style="margin-bottom:12px;padding:14px 16px;">';
+  s1 += '<div style="font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">📋 Podsumowanie</div>';
+  s1 += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+  stats.slice(0,6).forEach(function(s){
+    s1 += '<div style="background:var(--surface2);border-radius:10px;padding:10px 12px;">'
+      + '<div style="font-size:11px;color:var(--text3);margin-bottom:2px;">'+s.icon+' '+s.label+'</div>'
+      + '<div style="font-size:14px;font-weight:700;">'+s.val+'</div></div>';
+  });
+  s1 += '</div>';
+  // Tonaż i reszta szeroko
+  stats.slice(6).forEach(function(s){
+    s1 += '<div style="background:var(--surface2);border-radius:10px;padding:10px 12px;margin-top:8px;">'
+      + '<div style="font-size:11px;color:var(--text3);margin-bottom:2px;">'+s.icon+' '+s.label+'</div>'
+      + '<div style="font-size:14px;font-weight:700;">'+s.val+'</div></div>';
+  });
+  s1 += '</div>';
+
+  // ── Sekcja 2: Analiza mięśni ──
+  var muscleVol = {};
+  var totalMusVol = 0;
+  (w.exercises||[]).forEach(function(ex){
+    var def = allExercises.find(function(e){ return e.id===ex.id; });
+    if (!def || !def.muscles) return;
+    var doneSets = (ex.sets||[]).filter(function(s){ return s.done; }).length || (ex.sets||[]).length;
+    Object.keys(def.muscles).forEach(function(mk){
+      var contrib = doneSets * (def.muscles[mk]/100);
+      muscleVol[mk] = (muscleVol[mk]||0) + contrib;
+      totalMusVol += contrib;
+    });
+  });
+
+  var s2 = '';
+  if (totalMusVol > 0) {
+    var muscleArr = Object.keys(muscleVol)
+      .map(function(k){ return { key:k, label:muscleLabels[k]||k, vol:muscleVol[k] }; })
+      .filter(function(m){ return m.vol/totalMusVol > 0.03; })
+      .sort(function(a,b){ return b.vol-a.vol; });
+    var maxVol = muscleArr[0] ? muscleArr[0].vol : 1;
+
+    s2 = '<div class="card" style="margin-bottom:12px;padding:14px 16px;">';
+    s2 += '<div style="font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">💪 Analiza partii mięśniowych</div>';
+    muscleArr.forEach(function(m){
+      var pct = Math.round(m.vol/totalMusVol*100);
+      var barW = Math.round(m.vol/maxVol*100);
+      s2 += '<div style="margin-bottom:10px;">'
+        + '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">'
+        +   '<span style="font-weight:600;color:var(--text2);">'+m.label+'</span>'
+        +   '<span style="color:var(--accent);font-weight:700;">'+pct+'%</span>'
+        + '</div>'
+        + '<div style="background:var(--surface2);border-radius:4px;height:8px;overflow:hidden;">'
+        +   '<div style="width:'+barW+'%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width .5s ease;"></div>'
+        + '</div></div>';
+    });
+    s2 += '</div>';
+  }
+
+  // ── Sekcja 3: Rekordy ──
+  // Sprawdź czy jakiś set w tym treningu pobił rekord historyczny
+  var prRecords = [];
+  var workoutDate = new Date(w.date);
+  (w.exercises||[]).forEach(function(ex){
+    var def = allExercises.find(function(e){ return e.id===ex.id; });
+    if (!def) return;
+    var doneSets = (ex.sets||[]).filter(function(s){ return s.done && s.weight && s.reps; });
+    if (!doneSets.length) return;
+
+    // Find best e1RM for this exercise BEFORE this workout
+    var historicalBest = 0;
+    state.workouts.forEach(function(hw){
+      if (new Date(hw.date) >= workoutDate) return; // only before
+      (hw.exercises||[]).forEach(function(hex){
+        if (hex.id !== ex.id) return;
+        (hex.sets||[]).forEach(function(hs){
+          if (!hs.done || !hs.weight || !hs.reps) return;
+          var e = parseFloat(hs.weight)*(1+parseInt(hs.reps)/30);
+          if (e > historicalBest) historicalBest = e;
+        });
+      });
+    });
+
+    // Find best e1RM in this workout's exercise
+    var bestInWorkout = 0, bestW = 0, bestR = 0;
+    doneSets.forEach(function(s){
+      var e = parseFloat(s.weight)*(1+parseInt(s.reps)/30);
+      if (e > bestInWorkout) { bestInWorkout=e; bestW=parseFloat(s.weight); bestR=parseInt(s.reps); }
+    });
+
+    if (bestInWorkout > historicalBest && historicalBest > 0) {
+      prRecords.push({ name:def.name, weight:bestW, reps:bestR, e1rm:Math.round(bestInWorkout) });
+    }
+  });
+
+  var s3 = '';
+  if (prRecords.length) {
+    s3 = '<div class="card" style="margin-bottom:12px;padding:14px 16px;border-left:3px solid var(--accent);">';
+    s3 += '<div style="font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">🏆 Pobite rekordy</div>';
+    prRecords.forEach(function(pr){
+      var shortName = pr.name.length>40 ? pr.name.slice(0,38)+'…' : pr.name;
+      s3 += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:.5px solid var(--border2);">'
+        + '<span style="font-size:20px;">🏆</span>'
+        + '<div style="flex:1;"><div style="font-size:13px;font-weight:600;">'+shortName+'</div>'
+        + '<div style="font-size:12px;color:var(--text3);">'+pr.weight+'kg × '+pr.reps+' powt. · 1RM ~'+pr.e1rm+'kg</div></div>'
+        + '</div>';
+    });
+    s3 += '</div>';
+  }
+
+  // ── Sekcja 4: Porównanie z poprzednim treningiem ──
+  var s4 = '';
+  if (w.planId || w.planName) {
+    var samePlan = state.workouts.filter(function(pw){
+      return pw.id !== w.id && (pw.planId===w.planId || pw.planName===w.planName) && new Date(pw.date) < workoutDate;
+    }).sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+
+    if (samePlan.length) {
+      var prev = samePlan[0];
+      var prevDate = new Date(prev.date);
+      var prevTonnage = prev.tonnage || 0;
+      var prevSets    = prev.totalSets || 0;
+      var prevReps    = prev.totalReps || 0;
+      var prevDur     = prev.duration || 0;
+
+      var diffs = [
+        { icon:'⚖️', label:'Tonaż',        diff: totalTonnage - prevTonnage, unit:'kg', fmt:function(v){return v.toFixed(1);} },
+        { icon:'🔢', label:'Serie',         diff: totalSets - prevSets,    unit:'',   fmt:function(v){return Math.round(v);} },
+        { icon:'🔁', label:'Powtórzenia',   diff: totalReps - prevReps,    unit:'',   fmt:function(v){return Math.round(v);} },
+        { icon:'⏱️', label:'Czas treningu', diff: (w.duration||0) - prevDur, unit:'', fmt:function(v){return formatTime(Math.abs(Math.round(v)));} },
+      ];
+
+      s4 = '<div class="card" style="margin-bottom:12px;padding:14px 16px;">';
+      s4 += '<div style="font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">📊 Vs poprzedni trening</div>';
+      s4 += '<div style="font-size:11px;color:var(--text4);margin-bottom:10px;">'+prevDate.getDate()+' '+months[prevDate.getMonth()]+' '+prevDate.getFullYear()+'</div>';
+      s4 += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+      diffs.forEach(function(df){
+        if (df.diff === 0) return;
+        var isPos = df.label === 'Czas treningu' ? df.diff < 0 : df.diff > 0;
+        var sign  = df.diff > 0 ? '+' : '';
+        var col   = isPos ? 'var(--green)' : 'var(--red)';
+        var arrow = isPos ? '📈' : '📉';
+        var valStr = df.label === 'Czas treningu'
+          ? (df.diff>0?'+':'-')+df.fmt(df.diff)
+          : sign+df.fmt(df.diff)+(df.unit?' '+df.unit:'');
+        s4 += '<div style="background:var(--surface2);border-radius:10px;padding:10px 12px;">'
+          + '<div style="font-size:11px;color:var(--text3);margin-bottom:2px;">'+df.icon+' '+df.label+'</div>'
+          + '<div style="font-size:15px;font-weight:800;color:'+col+';">'+arrow+' '+valStr+'</div>'
+          + '</div>';
+      });
+      s4 += '</div></div>';
+    }
+  }
+
+  // ── Sekcja 5: Top 3 mięśnie ──
+  var s5 = '';
+  if (muscleArr && muscleArr.length >= 3) {
+    var medals = ['🥇','🥈','🥉'];
+    s5 = '<div class="card" style="margin-bottom:12px;padding:14px 16px;">';
+    s5 += '<div style="font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">🏅 Najbardziej zaangażowane mięśnie</div>';
+    muscleArr.slice(0,3).forEach(function(m,i){
+      s5 += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;'+(i<2?'border-bottom:.5px solid var(--border2);':'')+';">'
+        + '<span style="font-size:24px;">'+medals[i]+'</span>'
+        + '<div style="flex:1;font-size:14px;font-weight:700;">'+m.label+'</div>'
+        + '<div style="font-size:13px;color:var(--accent);font-weight:700;">'+Math.round(m.vol/totalMusVol*100)+'%</div>'
+        + '</div>';
+    });
+    s5 += '</div>';
+  }
+
+  // ── Lista ćwiczeń ──
+  var s6 = '<div class="card" style="margin-bottom:12px;padding:14px 16px;">';
+  s6 += '<div style="font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">📋 Wykonane ćwiczenia</div>';
+  (w.exercises||[]).forEach(function(ex){
+    var doneSets = (ex.sets||[]).filter(function(s){ return s.done; });
+    if (!doneSets.length) return;
+    var maxW = Math.max.apply(null, doneSets.map(function(s){return parseFloat(s.weight)||0;}));
+    var totalR = doneSets.reduce(function(a,s){return a+(parseInt(s.reps)||0);},0);
+    s6 += '<div style="padding:8px 0;border-bottom:.5px solid var(--border2);">'
+      + '<div style="font-size:13px;font-weight:700;margin-bottom:3px;">'+ex.name+'</div>'
+      + '<div style="font-size:12px;color:var(--text3);">'+doneSets.length+' serii · max '+maxW+'kg · '+totalR+' powt.</div>'
+      + '</div>';
+  });
+  s6 += '</div>';
+
+  body.innerHTML = s1 + s3 + s4 + s2 + s5 + s6;
+
+  // Animuj paski po renderze
+  requestAnimationFrame(function(){
+    body.querySelectorAll('[style*="transition:width"]').forEach(function(el){
+      var target = el.style.width;
+      el.style.width = '0%';
+      setTimeout(function(){ el.style.width = target; }, 50);
+    });
+  });
+
+  openSheet('workout-detail-sheet');
 }
 
