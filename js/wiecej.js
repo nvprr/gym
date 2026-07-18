@@ -25,7 +25,8 @@ function showWiecej(section) {
     ustawienia:  '⚙️ Ustawienia',
     dane:        '💾 Dane',
     changelog:   '📜 Historia zmian',
-    biblioteka:  '📚 Biblioteka ćwiczeń'
+    biblioteka:  '📚 Biblioteka',
+    kalkulatory: '🧮 Kalkulatory'
   };
   title.textContent = titles[section] || '';
 
@@ -38,6 +39,7 @@ function showWiecej(section) {
   else if (section === 'dane')        renderWiecejDane(content);
   else if (section === 'changelog')   renderWiecejChangelog(content);
   else if (section === 'biblioteka')  renderWiecejBiblioteka(content);
+  else if (section === 'kalkulatory') renderWiecejKalkulatory(content);
 }
 
 function hideWiecej() {
@@ -595,19 +597,56 @@ function renderWiecejChangelog(el) {
 
 var _bibFilter = { muscle: 'all', search: '', fav: false };
 
+// ── BIBLIOTEKA — główna (3 podsekcje) ──
 function renderWiecejBiblioteka(el) {
+  var sections = [
+    { key:'atlas',     icon:'📚', title:'Atlas ćwiczeń',            sub:'Baza 480+ ćwiczeń z opisami i filtrami' },
+    { key:'slownik',   icon:'📖', title:'Słownik pojęć',            sub:'Definicje terminów treningowych' },
+    { key:'zamienniki',icon:'🔄', title:'Zamienniki ćwiczeń',       sub:'Znajdź alternatywę dla ćwiczenia' },
+  ];
+  var html = '<div style="padding:0 16px;">';
+  sections.forEach(function(s) {
+    html += '<div onclick="showBibSection(\''+s.key+'\')" style="background:var(--surface2);border-radius:16px;padding:16px;margin-bottom:10px;cursor:pointer;display:flex;align-items:center;gap:14px;">'
+      + '<span style="font-size:32px;">'+s.icon+'</span>'
+      + '<div><div style="font-size:15px;font-weight:700;">'+s.title+'</div>'
+      + '<div style="font-size:12px;color:var(--text3);margin-top:2px;">'+s.sub+'</div></div>'
+      + '<div style="margin-left:auto;color:var(--text4);font-size:20px;">›</div>'
+      + '</div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+var _bibSection = 'atlas';
+function showBibSection(key) {
+  _bibSection = key;
+  var titles = { atlas:'📚 Atlas ćwiczeń', slownik:'📖 Słownik pojęć', zamienniki:'🔄 Zamienniki ćwiczeń' };
+  var titleEl = document.getElementById('wiecej-subview-title');
+  if (titleEl) titleEl.textContent = titles[key] || key;
+  var content = document.getElementById('wiecej-subview-content');
+  if (!content) return;
+  // Back button to biblioteka menu
+  content.innerHTML = '<button onclick="showWiecej(\'biblioteka\')" style="background:none;border:none;color:var(--accent);font-size:14px;cursor:pointer;padding:0 16px 12px;">← Biblioteka</button>'
+    + '<div id="bib-section-content"></div>';
+  var sec = document.getElementById('bib-section-content');
+  if (key === 'atlas')      renderBibAtlas(sec);
+  if (key === 'slownik')    renderBibSlownik(sec);
+  if (key === 'zamienniki') renderBibZamienniki(sec);
+}
+
+// ── ATLAS ĆWICZEŃ ──
+var _bibFilter = { muscle: 'all', search: '', fav: false };
+
+function renderBibAtlas(el) {
   el.innerHTML =
     '<div style="padding:0 16px;">'
-    // Wyszukiwarka
-    + '<div style="position:relative;margin-bottom:10px;">'
+    + '<div style="margin-bottom:10px;">'
     +   '<input id="bib-search" class="form-input" placeholder="🔍 Szukaj ćwiczenia..." style="padding-left:12px;"'
     +   ' oninput="_bibFilter.search=this.value;renderBibList()">'
     + '</div>'
-    // Filtry partii + ulubione
     + '<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none;margin-bottom:4px;" id="bib-muscle-chips">'
     +   _buildBibChips()
     + '</div>'
-    // Lista
     + '<div id="bib-list"></div>'
     + '</div>';
   renderBibList();
@@ -619,10 +658,9 @@ function _buildBibChips() {
   var html = '';
   muscles.forEach(function(m, i) {
     var active = m === _bibFilter.muscle ? ' active' : '';
-    html += '<button class="prog-tab'+active+'" onclick="setBibMuscle(\''+m+'\',this)">'+labels[i]+'</button>';
+    html += '<button class="prog-tab'+active+'" onclick="_bibFilter.search=\'\';setBibMuscle(\''+m+'\',this)">'+labels[i]+'</button>';
   });
-  html += '<button class="prog-tab'+(_bibFilter.fav?' active':'')
-        + '" onclick="toggleBibFav(this)" style="white-space:nowrap;">⭐ Ulubione</button>';
+  html += '<button class="prog-tab'+(_bibFilter.fav?' active':'')+'" onclick="toggleBibFav(this)" style="white-space:nowrap;">⭐ Ulubione</button>';
   return html;
 }
 
@@ -645,16 +683,13 @@ function toggleBibFav(btn) {
 function getBibFavs() {
   try { return JSON.parse(localStorage.getItem('gymflow_fav_exercises') || '[]'); } catch(e) { return []; }
 }
-
-function saveBibFavs(favs) {
-  localStorage.setItem('gymflow_fav_exercises', JSON.stringify(favs));
-}
+function saveBibFavs(favs) { localStorage.setItem('gymflow_fav_exercises', JSON.stringify(favs)); }
 
 function toggleExFav(id, btn) {
   var favs = getBibFavs();
   var idx = favs.indexOf(id);
-  if (idx > -1) { favs.splice(idx, 1); btn.textContent = '☆'; btn.style.color = 'var(--text4)'; }
-  else           { favs.push(id);       btn.textContent = '⭐'; btn.style.color = '#ffb753'; }
+  if (idx > -1) { favs.splice(idx,1); btn.textContent='☆'; btn.style.color='var(--text4)'; }
+  else           { favs.push(id);      btn.textContent='⭐'; btn.style.color='#ffb753'; }
   saveBibFavs(favs);
   if (_bibFilter.fav) renderBibList();
 }
@@ -662,7 +697,6 @@ function toggleExFav(id, btn) {
 function renderBibList() {
   var listEl = document.getElementById('bib-list');
   if (!listEl) return;
-
   var favs = getBibFavs();
   var all  = typeof getAllExercises === 'function' ? getAllExercises() : (typeof EXERCISES !== 'undefined' ? EXERCISES : []);
   var list = all.filter(function(ex) {
@@ -676,61 +710,308 @@ function renderBibList() {
     }
     return true;
   });
-
   if (!list.length) {
     listEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text4);">Brak ćwiczeń</div>';
     return;
   }
-
-  // Group by muscle
   var groups = {};
-  list.forEach(function(ex) {
-    var m = ex.muscle || 'Inne';
-    if (!groups[m]) groups[m] = [];
-    groups[m].push(ex);
-  });
-
+  list.forEach(function(ex) { var m=ex.muscle||'Inne'; if(!groups[m]) groups[m]=[]; groups[m].push(ex); });
   var muscleOrder = ['Klatka','Plecy','Barki','Biceps','Triceps','Nogi','Pośladki','Brzuch','Łydki','Inne'];
-  var html = '';
   var usedOrder = _bibFilter.muscle !== 'all' ? [_bibFilter.muscle] : muscleOrder;
-
+  var levelDots = {'łatwy':'🟢','średni':'🟡','zaawansowany':'🔴'};
+  var html = '';
   usedOrder.forEach(function(m) {
-    if (!groups[m] || !groups[m].length) return;
-    if (_bibFilter.muscle === 'all' && !_bibFilter.fav) {
-      html += '<div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;'
-            + 'letter-spacing:.5px;padding:12px 0 6px;">'+m+'</div>';
-    }
+    if (!groups[m]||!groups[m].length) return;
+    if (_bibFilter.muscle==='all'&&!_bibFilter.fav)
+      html += '<div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;padding:12px 0 6px;">'+m+'</div>';
     groups[m].forEach(function(ex) {
-      var isFav = favs.indexOf(ex.id) !== -1;
-      var levelColors = { 'łatwy':'var(--green)', 'średni':'var(--yellow)', 'zaawansowany':'var(--red)' };
-      var levelDots   = { 'łatwy':'🟢', 'średni':'🟡', 'zaawansowany':'🔴' };
-      html +=
-        '<div style="background:var(--surface2);border-radius:14px;padding:14px;margin-bottom:8px;cursor:pointer;"'
-        +' onclick="openBibDetail(\''+ex.id+'\')">'
-        +  '<div style="display:flex;align-items:flex-start;gap:8px;">'
-        +    '<div style="flex:1;">'
-        +      '<div style="font-weight:700;font-size:14px;margin-bottom:4px;">'+ex.name+'</div>'
-        +      '<div style="display:flex;gap:5px;flex-wrap:wrap;">'
-        +        '<span style="background:var(--accent-light);color:var(--accent);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600;">'+(ex.sub||ex.muscle)+'</span>'
-        +        (ex.aux||[]).slice(0,2).map(function(a){ return '<span style="background:var(--surface);border-radius:20px;padding:2px 8px;font-size:11px;color:var(--text3);">'+a+'</span>'; }).join('')
-        +        '<span style="font-size:11px;color:var(--text4);">'+(levelDots[ex.level]||'🟡')+' '+(ex.level||'')+'</span>'
-        +      '</div>'
-        +    '</div>'
-        +    '<button onclick="event.stopPropagation();toggleExFav(\''+ex.id+'\',this)"'
-        +     ' style="background:none;border:none;font-size:20px;cursor:pointer;padding:0 4px;color:'+(isFav?'#ffb753':'var(--text4)')+';">'
-        +      (isFav?'⭐':'☆')
-        +    '</button>'
-        +  '</div>'
-        +'</div>';
+      var isFav = favs.indexOf(ex.id)!==-1;
+      html += '<div style="background:var(--surface2);border-radius:14px;padding:14px;margin-bottom:8px;cursor:pointer;" onclick="openBibDetail(\''+ex.id+'\')">'
+        + '<div style="display:flex;align-items:flex-start;gap:8px;">'
+        +   '<div style="flex:1;">'
+        +     '<div style="font-weight:700;font-size:14px;margin-bottom:4px;">'+ex.name+'</div>'
+        +     '<div style="display:flex;gap:5px;flex-wrap:wrap;">'
+        +       '<span style="background:var(--accent-light);color:var(--accent);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600;">'+(ex.sub||ex.muscle)+'</span>'
+        +       (ex.aux||[]).slice(0,2).map(function(a){return '<span style="background:var(--surface);border-radius:20px;padding:2px 8px;font-size:11px;color:var(--text3);">'+a+'</span>';}).join('')
+        +       '<span style="font-size:11px;color:var(--text4);">'+(levelDots[ex.level]||'🟡')+' '+(ex.level||'')+'</span>'
+        +     '</div>'
+        +   '</div>'
+        +   '<button onclick="event.stopPropagation();toggleExFav(\''+ex.id+'\',this)" style="background:none;border:none;font-size:20px;cursor:pointer;padding:0 4px;color:'+(isFav?'#ffb753':'var(--text4)')+';">'+(isFav?'⭐':'☆')+'</button>'
+        + '</div></div>';
     });
   });
-
   listEl.innerHTML = html;
 }
 
 function openBibDetail(exId) {
-  // Używa istniejącej funkcji z exercise_detail.js
-  if (typeof openExerciseDetail === 'function') {
-    openExerciseDetail(exId);
-  }
+  if (typeof openExerciseDetail === 'function') openExerciseDetail(exId);
 }
+
+// ── SŁOWNIK POJĘĆ ──
+var SLOWNIK = [
+  { term:'1RM (One Rep Max)',     def:'Maksymalny ciężar jaki możesz podnieść w jednym powtórzeniu.',                               ex:'Twój 1RM w bench press to 100kg.' },
+  { term:'RIR (Reps In Reserve)', def:'Liczba powtórzeń jaką mógłbyś jeszcze wykonać przed osiągnięciem upadku.',                   ex:'RIR 2 = mogłeś zrobić jeszcze 2 powt.' },
+  { term:'RPE (Rate of Perceived Exertion)', def:'Skala wysiłku 1-10. RPE 10 = absolutny upadek.',                                 ex:'Seria na RPE 8 = 2 powt. zapasu (RIR 2).' },
+  { term:'Progressive Overload',  def:'Stopniowe zwiększanie obciążenia, objętości lub intensywności treningu.',                    ex:'Co tydzień dodaj 2.5kg lub 1 serię.' },
+  { term:'Drop Set',              def:'Seria do upadku, po czym natychmiast zmniejszasz ciężar i kontynuujesz.',                    ex:'100kg do upadku → 80kg → 60kg bez przerwy.' },
+  { term:'Super Set',             def:'Dwa ćwiczenia wykonywane bez przerwy, zazwyczaj antagonistyczne partie.',                    ex:'Biceps curl → triceps pushdown bez pauzy.' },
+  { term:'Giant Set',             def:'Trzy lub więcej ćwiczeń pod rząd bez przerwy.',                                              ex:'Bench → OHP → Push-up → Dips bez przerwy.' },
+  { term:'Tempo',                 def:'Szybkość faz ruchu: ekscentryczna/pauza/koncentryczna/pauza. Zapis 3-1-2-0.',               ex:'Tempo 3-0-1-0: 3 sek w dół, 1 sek w górę.' },
+  { term:'ROM (Range of Motion)', def:'Pełny zakres ruchu w ćwiczeniu.',                                                            ex:'Pełny ROM w przysiądzie = uda poniżej poziomu.' },
+  { term:'Deload',                def:'Tydzień z obniżonym obciążeniem ok. 40-60% dla regeneracji.',                                ex:'Co 4-6 tygodni tydzień deload dla uniknięcia przetrenowania.' },
+  { term:'Failure (Upadek mięśniowy)', def:'Moment gdy nie możesz wykonać kolejnego powtórzenia z prawidłową techniką.',           ex:'Seria do upadku = ostatnie powt. nie wychodzi.' },
+  { term:'Warm-up',               def:'Rozgrzewka przed treningiem: cardio + ćwiczenia mobilizacyjne + serie rozgrzewkowe.',        ex:'5 min orbitrek + 2 serie z 50% ciężaru roboczego.' },
+  { term:'Cool-down',             def:'Wyciszenie po treningu: stretching, lekkie cardio, powolny powrót do normalnego tętna.',     ex:'10 min spokojny marsz + rozciąganie statyczne.' },
+  { term:'Compound Exercise',     def:'Ćwiczenie wielostawowe angażujące wiele grup mięśniowych jednocześnie.',                     ex:'Przysiad, martwy ciąg, bench press, OHP.' },
+  { term:'Isolation Exercise',    def:'Ćwiczenie jednostawowe skupiające się na jednej grupie mięśniowej.',                         ex:'Uginanie bicepsa, prostowanie tricepsa.' },
+  { term:'Volume (Objętość)',     def:'Łączna liczba serii × powtórzenia × ciężar w danym treningu lub tygodniu.',                  ex:'10 serii × 8 powt. × 100kg = 8000kg objętości.' },
+  { term:'Intensity (Intensywność)', def:'Procentowy stosunek ciężaru do 1RM.',                                                     ex:'80% 1RM przy 1RM=100kg = praca z 80kg.' },
+  { term:'Frequency (Częstotliwość)', def:'Ile razy w tygodniu trenujesz daną partię mięśniową.',                                  ex:'Częstotliwość 2 = każda partia 2x w tygodniu.' },
+  { term:'TUT (Time Under Tension)', def:'Czas pod napięciem — jak długo mięsień pracuje podczas serii.',                          ex:'Seria 8 powt. z tempem 3-0-2 = 40 sek TUT.' },
+  { term:'Cheat Reps',            def:'Użycie rozmachu lub dodatkowych mięśni do wykonania trudnych powtórzeń na końcu serii.',     ex:'Kiwanie tułowiem przy ostatnich 2 powt. uginania.' },
+  { term:'Rest-Pause',            def:'Krótka pauza 10-20 sek w środku serii do wykonania większej liczby powtórzeń.',             ex:'8 powt. → pauza 15 sek → 4 powt. → pauza → 3 powt.' },
+  { term:'Mechanical Drop Set',   def:'Zmiana wariantu ćwiczenia (nie ciężaru) gdy osiągniesz upadek.',                            ex:'Dumbbell incline press → flat press → floor press.' },
+  { term:'AMRAP',                 def:'As Many Reps As Possible — jak najwięcej powtórzeń w danym czasie lub serii.',              ex:'AMRAP 5 minut: max pompki.' },
+  { term:'EMOM',                  def:'Every Minute On the Minute — określona praca co minutę przez X minut.',                     ex:'EMOM 10 min: 5 pull-upów na starcie każdej minuty.' },
+  { term:'HIIT',                  def:'High Intensity Interval Training — naprzemienny wysiłek maksymalny i odpoczynek.',          ex:'20 sek sprint / 40 sek marsz × 10 rund.' },
+];
+
+var _slownikSearch = '';
+
+function renderBibSlownik(el) {
+  el.innerHTML =
+    '<div style="padding:0 16px;">'
+    + '<input id="slownik-search" class="form-input" placeholder="🔍 Szukaj pojęcia..." style="margin-bottom:12px;" oninput="_slownikSearch=this.value;renderSlownikList()">'
+    + '<div id="slownik-list"></div>'
+    + '</div>';
+  renderSlownikList();
+}
+
+function renderSlownikList() {
+  var el = document.getElementById('slownik-list');
+  if (!el) return;
+  var q = _slownikSearch.toLowerCase();
+  var list = SLOWNIK.filter(function(s) {
+    return !q || s.term.toLowerCase().indexOf(q) !== -1 || s.def.toLowerCase().indexOf(q) !== -1;
+  });
+  if (!list.length) { el.innerHTML='<div style="text-align:center;padding:24px;color:var(--text4);">Brak wyników</div>'; return; }
+  el.innerHTML = list.map(function(s) {
+    return '<div style="background:var(--surface2);border-radius:14px;padding:14px;margin-bottom:8px;">'
+      + '<div style="font-size:14px;font-weight:800;color:var(--accent);margin-bottom:6px;">'+s.term+'</div>'
+      + '<div style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:6px;">'+s.def+'</div>'
+      + '<div style="font-size:12px;color:var(--text3);background:var(--surface);border-radius:8px;padding:6px 10px;">💡 '+s.ex+'</div>'
+      + '</div>';
+  }).join('');
+}
+
+// ── ZAMIENNIKI ĆWICZEŃ ──
+var ZAMIENNIKI = {
+  'e1':  ['p9','p5','e4b','f3','e3b','p4'],
+  'e2':  ['p9','e2b','e2c','f4','e3c'],
+  'e4':  ['f9','f10','f11','p6','p7','p8','p26','p27'],
+  'e6':  ['g11','g12','e6b','e6c','g13','g14','g15','p216'],
+  'e6b': ['p167','g15','e6c'],
+  'e7':  ['e7b','p34','p35','e9','p51','p69','p70','p71'],
+  'e8':  ['e8b','e10','g4','g5','g6','g3','p32','p33','p38'],
+  'e9':  ['g7','g8','p62','p64','p65','p50'],
+  'e10': ['g5','p44','p66','g19'],
+  'e11': ['e11b','e11c','e11d','e11e','k3','k4','k5','p203','p205'],
+  'e11d':['e11','e11e','k17','p187','p182','p192','k27'],
+  'e12': ['e12b','e12c','k15','k16','p160','p166','p190'],
+  'e13': ['p186','p191','k15','p164'],
+  'e14': ['e14b','k10','k11','k12','p185','p198'],
+  'e15': ['e15b','k18','k19','k20','k21','p202','p210'],
+  'e16': ['e16b','e16d','l2','l1','p181'],
+  'e16c':['k25','k26','p171','p193','p195','p179'],
+  'e17': ['e17b','e17c','h2','h4','p93','p99','p101','p102'],
+  'e18': ['e18b','h3','h5','p96','p98','p103'],
+  'e19': ['h6','p85','p87','p92'],
+  'e19b':['p77','p84','p94','p109'],
+  'e20': ['e21','e21b','e21c','e21d','e21e','i3','i4','i6'],
+  'e21': ['e20','e21b','e21c','i10'],
+  'e22': ['p153','p152','j1','j2','p140','p141'],
+  'e23': ['e23c','j7','p142','p150'],
+  'e23b':['e23e','p154','j3','j4','j10'],
+  'e24': ['e26f','m11','m12','p231'],
+  'e25': ['e25b','p223','p225','m14','m15'],
+  'e26': ['e26b','m3','m7','p221','p222'],
+  'e10b':['h11','p81'],
+  'e10d':['p52','p54','p76','p53'],
+  'h11': ['e10b','p81','h6'],
+  'n6':  ['p238','p264','p261'],
+};
+
+var _zamSearch = '';
+var _zamSelected = null;
+
+function renderBibZamienniki(el) {
+  el.innerHTML =
+    '<div style="padding:0 16px;">'
+    + '<input id="zam-search" class="form-input" placeholder="🔍 Szukaj ćwiczenia..." style="margin-bottom:12px;" oninput="_zamSearch=this.value;renderZamList()">'
+    + '<div id="zam-list"></div>'
+    + '<div id="zam-results"></div>'
+    + '</div>';
+  renderZamList();
+}
+
+function renderZamList() {
+  var el = document.getElementById('zam-list');
+  var resEl = document.getElementById('zam-results');
+  if (!el) return;
+  var q = _zamSearch.toLowerCase();
+  if (!q) { el.innerHTML='<div style="text-align:center;padding:16px;color:var(--text4);font-size:13px;">Wpisz nazwę ćwiczenia lub wybierz z listy</div>'; if(resEl)resEl.innerHTML=''; return; }
+  var all = typeof getAllExercises==='function' ? getAllExercises() : EXERCISES;
+  var list = all.filter(function(ex){ return ex.name.toLowerCase().indexOf(q)!==-1 || (ex.muscle||'').toLowerCase().indexOf(q)!==-1; }).slice(0,12);
+  if (!list.length) { el.innerHTML='<div style="text-align:center;padding:16px;color:var(--text4);">Brak wyników</div>'; if(resEl)resEl.innerHTML=''; return; }
+  el.innerHTML = list.map(function(ex) {
+    var hasAlts = !!ZAMIENNIKI[ex.id];
+    return '<div onclick="selectZamEx(\''+ex.id+'\')" style="background:var(--surface2);border-radius:12px;padding:12px 14px;margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">'
+      + '<div><div style="font-weight:600;font-size:13px;">'+ex.name+'</div>'
+      + '<div style="font-size:11px;color:var(--text3);">'+ex.muscle+(hasAlts?' · <span style="color:var(--accent);">'+ZAMIENNIKI[ex.id].length+' zamienników</span>':'')+'</div></div>'
+      + '<div style="color:var(--text4);">›</div>'
+      + '</div>';
+  }).join('');
+  if (resEl) resEl.innerHTML = '';
+}
+
+function selectZamEx(id) {
+  var all = typeof getAllExercises==='function' ? getAllExercises() : EXERCISES;
+  var ex = all.find(function(e){ return e.id===id; });
+  var resEl = document.getElementById('zam-results');
+  if (!resEl || !ex) return;
+  var altIds = ZAMIENNIKI[id] || [];
+  if (!altIds.length) {
+    resEl.innerHTML = '<div style="background:var(--surface2);border-radius:14px;padding:16px;margin-top:8px;text-align:center;color:var(--text3);">Brak zamienników w bazie.</div>';
+    return;
+  }
+  var levelDots = {'łatwy':'🟢','średni':'🟡','zaawansowany':'🔴'};
+  var equipMap  = {'wielostawowe':'Sztanga/Hantle','izolacyjne':'Maszyna/Wyciąg','kalisteniczne':'Masa ciała','cardio':'Brak sprzętu'};
+  var html = '<div style="margin-top:12px;">'
+    + '<div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text3);">Zamienniki dla: <span style="color:var(--text);">'+ex.name+'</span></div>';
+  altIds.forEach(function(altId) {
+    var alt = all.find(function(e){ return e.id===altId; });
+    if (!alt) return;
+    html += '<div onclick="openBibDetail(\''+altId+'\')" style="background:var(--surface2);border-radius:12px;padding:12px 14px;margin-bottom:6px;cursor:pointer;">'
+      + '<div style="font-weight:600;font-size:13px;margin-bottom:4px;">'+alt.name+'</div>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+      + '<span style="background:var(--accent-light);color:var(--accent);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600;">'+(alt.sub||alt.muscle)+'</span>'
+      + '<span style="background:var(--surface);border-radius:20px;padding:2px 8px;font-size:11px;color:var(--text3);">'+(equipMap[alt.category]||alt.category||'')+'</span>'
+      + '<span style="font-size:11px;color:var(--text4);">'+(levelDots[alt.level]||'🟡')+' '+(alt.level||'')+'</span>'
+      + '</div></div>';
+  });
+  html += '</div>';
+  resEl.innerHTML = html;
+}
+
+// ── KALKULATORY ──
+function renderWiecejKalkulatory(el) {
+  var calcs = [
+    { key:'1rm',      icon:'🏋️', title:'Kalkulator 1RM',          sub:'Oblicz swój maksymalny ciężar' },
+    { key:'objetosc', icon:'📊', title:'Objętość treningowa',       sub:'Ciężar × Serie × Powtórzenia' },
+  ];
+  var html = '<div style="padding:0 16px;">';
+  calcs.forEach(function(c) {
+    html += '<div onclick="showKalkulator(\''+c.key+'\')" style="background:var(--surface2);border-radius:16px;padding:16px;margin-bottom:10px;cursor:pointer;display:flex;align-items:center;gap:14px;">'
+      + '<span style="font-size:32px;">'+c.icon+'</span>'
+      + '<div><div style="font-size:15px;font-weight:700;">'+c.title+'</div>'
+      + '<div style="font-size:12px;color:var(--text3);margin-top:2px;">'+c.sub+'</div></div>'
+      + '<div style="margin-left:auto;color:var(--text4);font-size:20px;">›</div>'
+      + '</div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function showKalkulator(key) {
+  var titles = { '1rm':'🏋️ Kalkulator 1RM', 'objetosc':'📊 Objętość treningowa' };
+  var titleEl = document.getElementById('wiecej-subview-title');
+  if (titleEl) titleEl.textContent = titles[key] || key;
+  var content = document.getElementById('wiecej-subview-content');
+  if (!content) return;
+  content.innerHTML = '<button onclick="showWiecej(\'kalkulatory\')" style="background:none;border:none;color:var(--accent);font-size:14px;cursor:pointer;padding:0 16px 12px;">← Kalkulatory</button>'
+    + '<div id="kalk-content"></div>';
+  var sec = document.getElementById('kalk-content');
+  if (key === '1rm')      renderKalk1RM(sec);
+  if (key === 'objetosc') renderKalkObjetosc(sec);
+}
+
+function renderKalk1RM(el) {
+  el.innerHTML =
+    '<div style="padding:0 16px;">'
+    + '<div class="card" style="margin-bottom:12px;">'
+    +   '<div style="font-size:13px;color:var(--text3);margin-bottom:12px;">Podaj ciężar i liczbę powtórzeń, a obliczę Twój szacowany 1RM (formuła Epley).</div>'
+    +   '<div style="display:flex;gap:8px;margin-bottom:10px;">'
+    +     '<div style="flex:1;"><label class="form-label">Ciężar (kg)</label><input id="k1rm-weight" class="form-input" type="number" min="1" placeholder="100" oninput="calc1RM()"></div>'
+    +     '<div style="flex:1;"><label class="form-label">Powtórzenia</label><input id="k1rm-reps" class="form-input" type="number" min="1" max="30" placeholder="5" oninput="calc1RM()"></div>'
+    +   '</div>'
+    +   '<div id="k1rm-result"></div>'
+    + '</div>'
+    + '</div>';
+}
+
+function calc1RM() {
+  var w = parseFloat(document.getElementById('k1rm-weight').value);
+  var r = parseInt(document.getElementById('k1rm-reps').value);
+  var el = document.getElementById('k1rm-result');
+  if (!el) return;
+  if (!w || !r || r < 1) { el.innerHTML=''; return; }
+  var e1rm = w * (1 + r/30);
+  var pcts = [50,60,70,75,80,85,90,95,100];
+  var html = '<div style="background:var(--surface2);border-radius:12px;padding:14px;margin-bottom:12px;text-align:center;">'
+    + '<div style="font-size:13px;color:var(--text3);">Szacowany 1RM</div>'
+    + '<div style="font-size:36px;font-weight:800;color:var(--accent);">'+Math.round(e1rm)+' kg</div>'
+    + '</div>'
+    + '<div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Sugerowane ciężary</div>';
+  pcts.forEach(function(p) {
+    var kg = Math.round(e1rm * p/100 * 4) / 4;
+    var barW = p;
+    var isHighlight = p === 80 || p === 85;
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+      + '<div style="width:36px;font-size:12px;color:'+(isHighlight?'var(--accent)':'var(--text3)')+';font-weight:'+(isHighlight?'700':'400')+';">'+p+'%</div>'
+      + '<div style="flex:1;background:var(--surface2);border-radius:4px;height:8px;overflow:hidden;">'
+      +   '<div style="width:'+barW+'%;height:100%;background:'+(isHighlight?'var(--accent)':'var(--surface3)')+';border-radius:4px;"></div>'
+      + '</div>'
+      + '<div style="width:60px;text-align:right;font-size:13px;font-weight:'+(isHighlight?'700':'400')+';color:'+(isHighlight?'var(--accent)':'var(--text)')+';">'+kg+' kg</div>'
+      + '</div>';
+  });
+  el.innerHTML = html;
+}
+
+function renderKalkObjetosc(el) {
+  el.innerHTML =
+    '<div style="padding:0 16px;">'
+    + '<div class="card">'
+    +   '<div style="font-size:13px;color:var(--text3);margin-bottom:12px;">Oblicz całkowitą objętość treningową dla danego ćwiczenia.</div>'
+    +   '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">'
+    +     '<div><label class="form-label">Ciężar (kg)</label><input id="kobj-weight" class="form-input" type="number" min="0" placeholder="80" oninput="calcObjetosc()"></div>'
+    +     '<div><label class="form-label">Serie</label><input id="kobj-sets" class="form-input" type="number" min="1" placeholder="4" oninput="calcObjetosc()"></div>'
+    +     '<div><label class="form-label">Powt.</label><input id="kobj-reps" class="form-input" type="number" min="1" placeholder="8" oninput="calcObjetosc()"></div>'
+    +   '</div>'
+    +   '<div id="kobj-result"></div>'
+    + '</div>'
+    + '</div>';
+}
+
+function calcObjetosc() {
+  var w = parseFloat(document.getElementById('kobj-weight').value);
+  var s = parseInt(document.getElementById('kobj-sets').value);
+  var r = parseInt(document.getElementById('kobj-reps').value);
+  var el = document.getElementById('kobj-result');
+  if (!el) return;
+  if (!w || !s || !r) { el.innerHTML=''; return; }
+  var vol = w * s * r;
+  var tons = (vol/1000).toFixed(2);
+  el.innerHTML =
+    '<div style="background:var(--surface2);border-radius:12px;padding:16px;text-align:center;">'
+    + '<div style="font-size:13px;color:var(--text3);margin-bottom:4px;">Objętość treningowa</div>'
+    + '<div style="font-size:36px;font-weight:800;color:var(--accent);">'+vol.toLocaleString('pl')+' kg</div>'
+    + '<div style="font-size:13px;color:var(--text3);margin-top:4px;">'+(tons)+' ton</div>'
+    + '<div style="margin-top:14px;padding-top:14px;border-top:.5px solid var(--border2);display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">'
+    + _kObjStat('⚖️ Ciężar',w+' kg')+_kObjStat('🔢 Serie',s)+_kObjStat('🔁 Powt.',r)
+    + '</div></div>';
+}
+
+function _kObjStat(label, val) {
+  return '<div style="text-align:center;"><div style="font-size:11px;color:var(--text3);">'+label+'</div><div style="font-size:15px;font-weight:700;">'+val+'</div></div>';
+}
+
