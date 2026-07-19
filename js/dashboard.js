@@ -192,6 +192,26 @@ function renderDashboardCardContent(key,editMode){
         + '</div>';
       return html;
     }
+    case 'activeGoal': {
+      var ag = state.settings.activeGoal;
+      if (!ag) {
+        return '<div class="card-title">🎯 Aktualny cel</div>'
+          + '<div class="dashboard-card-note">Nie wybrałeś jeszcze celu.</div>'
+          + '<button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="openActiveGoalSheet()">+ Ustaw cel</button>';
+      }
+      var gp = getActiveGoalProgress(ag);
+      var barColor = gp.reached ? 'var(--green)' : 'var(--accent)';
+      return '<div style="display:flex;align-items:center;justify-content:space-between;">'
+        +   '<div class="card-title" style="margin-bottom:0;">🎯 Aktualny cel</div>'
+        +   '<button onclick="event.stopPropagation();openActiveGoalSheet()" style="background:none;border:none;color:var(--text3);font-size:15px;cursor:pointer;padding:2px 4px;" title="Zmień cel">✏️</button>'
+        + '</div>'
+        + '<div style="font-size:16px;font-weight:800;margin:8px 0 10px;cursor:pointer;" onclick="openActiveGoalSheet()">' + ag.label + (gp.reached ? ' ✅' : '') + '</div>'
+        + '<div class="dashboard-card-progress"><div class="dashboard-card-progress-fill" style="width:' + gp.pct + '%;background:' + barColor + ';transition:width .6s cubic-bezier(.4,0,.2,1);"></div></div>'
+        + '<div style="display:flex;justify-content:space-between;margin-top:6px;font-size:13px;color:var(--text3);">'
+        +   '<span>' + gp.displayCurrent + ' / ' + gp.displayTarget + ' ' + gp.unit + '</span>'
+        +   '<span style="font-weight:700;color:' + barColor + ';">' + gp.pct + '%</span>'
+        + '</div>';
+    }
     default: return `<div class="card-title">${key}</div><div class="dashboard-card-note">Brak danych.</div>`;
   }
 }
@@ -211,6 +231,7 @@ function renderDashboardCards(){
     const hiddenCount=hidden.length;
     bannerText.textContent=hiddenCount?`Tryb edycji · ${hiddenCount} ukryta${hiddenCount===1?'a':'ych'} karta / przeciągnij, aby zmienić kolejność.`:'Tryb edycji · przeciągnij karty, aby zmienić kolejność.';
   }
+  checkActiveGoalCompletion();
 }
 
 function renderDashMuscleMap() {
@@ -316,5 +337,114 @@ function touchDashboardCardEnd(){
   }
   dashboardDragKey=null;
   touchDragTargetKey=null;
+}
+
+// ── WIDGET "AKTUALNY CEL" ──
+
+function openActiveGoalSheet(){
+  var ag=state.settings.activeGoal||{type:'exercise',target:'',exerciseName:''};
+  var typeInput=document.getElementById('ag-type-input');
+  var exInput=document.getElementById('ag-ex-input');
+  var targetInput=document.getElementById('ag-target-input');
+  var clearBtn=document.getElementById('ag-clear-btn');
+  if(!typeInput||!exInput||!targetInput) return;
+  typeInput.value=ag.type||'exercise';
+  exInput.value=ag.exerciseName||'';
+  targetInput.value=ag.target||'';
+  if(clearBtn) clearBtn.style.display=state.settings.activeGoal?'block':'none';
+  _buildAgExerciseDatalist();
+  onActiveGoalTypeChange();
+  openSheet('active-goal-sheet');
+}
+
+function _buildAgExerciseDatalist(){
+  var dl=document.getElementById('ag-ex-list');
+  if(!dl) return;
+  var all=typeof getAllExercises==='function'?getAllExercises():(typeof EXERCISES!=='undefined'?EXERCISES:[]);
+  dl.innerHTML=all.map(function(ex){ return '<option value="'+String(ex.name).replace(/"/g,'&quot;')+'">'; }).join('');
+}
+
+function onActiveGoalTypeChange(){
+  var typeInput=document.getElementById('ag-type-input');
+  var exRow=document.getElementById('ag-ex-row');
+  var targetLabel=document.getElementById('ag-target-label');
+  if(!typeInput) return;
+  var type=typeInput.value;
+  if(exRow) exRow.style.display=type==='exercise'?'block':'none';
+  var labels={
+    exercise:'Docelowy ciężar — e1RM (kg)',
+    bodyweight:'Docelowa masa ciała (kg)',
+    workoutsMonth:'Treningi w tym miesiącu',
+    tonnage:'Docelowy tonaż (kg)',
+    weeklySets:'Docelowe serie w tygodniu'
+  };
+  if(targetLabel) targetLabel.textContent=labels[type]||'Wartość docelowa';
+}
+
+function saveActiveGoal(){
+  var type=document.getElementById('ag-type-input').value;
+  var target=parseFloat(document.getElementById('ag-target-input').value);
+  if(!target||target<=0){ showNotif('⚠️','Błąd','Podaj wartość docelową'); return; }
+  var exName=(document.getElementById('ag-ex-input').value||'').trim();
+  var goal={ type:type, target:target, celebrated:false };
+  if(type==='exercise'){
+    if(!exName){ showNotif('⚠️','Błąd','Wybierz ćwiczenie'); return; }
+    var all=typeof getAllExercises==='function'?getAllExercises():(typeof EXERCISES!=='undefined'?EXERCISES:[]);
+    var match=all.find(function(e){ return e.name.toLowerCase()===exName.toLowerCase(); });
+    goal.exerciseId=match?match.id:null;
+    goal.exerciseName=exName;
+    goal.label=exName+' '+target+' kg';
+  } else if(type==='bodyweight'){
+    goal.label='Masa ciała '+target+' kg';
+  } else if(type==='workoutsMonth'){
+    goal.label='Treningi w miesiącu: '+target;
+  } else if(type==='tonnage'){
+    goal.label='Tonaż '+target.toLocaleString('pl')+' kg';
+  } else if(type==='weeklySets'){
+    goal.label='Serie tygodniowo: '+target;
+  }
+  state.settings.activeGoal=goal;
+  saveSettings();
+  closeSheet('active-goal-sheet');
+  renderDashboardCards();
+  showNotif('🎯','Cel ustawiony',goal.label);
+}
+
+function clearActiveGoal(){
+  state.settings.activeGoal=null;
+  saveSettings();
+  closeSheet('active-goal-sheet');
+  renderDashboardCards();
+}
+
+function checkActiveGoalCompletion(){
+  var ag=state.settings.activeGoal;
+  if(!ag||ag.celebrated) return;
+  if(typeof getActiveGoalProgress!=='function') return;
+  var gp=getActiveGoalProgress(ag);
+  if(gp.reached){
+    ag.celebrated=true;
+    saveSettings();
+    celebrateGoalReached(ag.label);
+  }
+}
+
+function celebrateGoalReached(label){
+  var emojis=['🎉','🎊','⭐','🔥','💪','🏆'];
+  for(var i=0;i<24;i++){
+    (function(i){
+      setTimeout(function(){
+        var el=document.createElement('div');
+        el.className='confetti-piece';
+        el.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+        el.style.left=(Math.random()*100)+'vw';
+        el.style.fontSize=(16+Math.random()*14)+'px';
+        el.style.animationDuration=(1.8+Math.random()*1.2)+'s';
+        document.body.appendChild(el);
+        setTimeout(function(){ el.remove(); },3300);
+      },i*40);
+    })(i);
+  }
+  if(typeof showNotif==='function') showNotif('🎉','Cel osiągnięty!',label);
 }
 

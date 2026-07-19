@@ -847,6 +847,94 @@ function renderTimeline() {
   }).join('');
 }
 
+// ===================== AKTUALNY CEL (WIDGET DASHBOARD) =====================
+// Jeden wyróżniony cel, niezależny od listy celów w Progress → Cele.
+// Przechowywany w state.settings.activeGoal = {
+//   type: 'exercise'|'bodyweight'|'workoutsMonth'|'tonnage'|'weeklySets',
+//   target, label, exerciseId, exerciseName, celebrated
+// }
+
+function getLatestMeasurementEntry() {
+  // Pomiary ciała są w localStorage (gymflow_body_measurements), obsługiwane
+  // przez body_measurements.js — loadBodyMeasurements() zwraca tablicę
+  // posortowaną malejąco po dacie (all[0] = najnowszy wpis).
+  if (typeof loadBodyMeasurements === 'function') {
+    var all = loadBodyMeasurements();
+    return (all && all.length) ? all[0] : null;
+  }
+  // Fallback na wypadek starszej struktury state.measurements
+  if (!state.measurements || !state.measurements.length) return null;
+  var sorted = state.measurements.slice().sort(function(a, b) {
+    return new Date(b.date) - new Date(a.date);
+  });
+  return sorted[0] || null;
+}
+
+function getLatestBodyWeight() {
+  var m = getLatestMeasurementEntry();
+  if (!m) return null;
+  var raw = m.weight != null ? m.weight : m.waga;
+  var w = parseFloat(raw);
+  return isNaN(w) ? null : w;
+}
+
+function getWorkoutsThisMonthCount() {
+  var now = new Date();
+  return state.workouts.filter(function(w) {
+    var d = new Date(w.date);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  }).length;
+}
+
+function getWeeklySetsCount() {
+  var since = Date.now() - 7 * 86400000;
+  return state.workouts
+    .filter(function(w) { return new Date(w.date).getTime() > since; })
+    .reduce(function(total, w) {
+      if (typeof w.totalSets === 'number') return total + w.totalSets;
+      var sets = (w.exercises || []).reduce(function(s, ex) {
+        return s + (ex.sets || []).filter(function(st) { return st.done; }).length;
+      }, 0);
+      return total + sets;
+    }, 0);
+}
+
+function getActiveGoalProgress(goal) {
+  var current = 0, unit = '';
+  var target = parseFloat(goal.target) || 0;
+  if (goal.type === 'exercise') {
+    unit = 'kg';
+    var records = computeAllRecords();
+    var rec = goal.exerciseId ? records[goal.exerciseId] : null;
+    if (!rec && goal.exerciseName) {
+      var qn = goal.exerciseName.toLowerCase();
+      Object.keys(records).forEach(function(id) {
+        if (records[id].name && records[id].name.toLowerCase() === qn) rec = records[id];
+      });
+    }
+    current = rec ? rec.maxE1RM : 0;
+  } else if (goal.type === 'bodyweight') {
+    unit = 'kg';
+    current = getLatestBodyWeight() || 0;
+  } else if (goal.type === 'workoutsMonth') {
+    unit = 'treningów';
+    current = getWorkoutsThisMonthCount();
+  } else if (goal.type === 'tonnage') {
+    unit = 'kg';
+    current = state.workouts.reduce(function(a, w) { return a + (w.tonnage || 0); }, 0);
+  } else if (goal.type === 'weeklySets') {
+    unit = 'serii';
+    current = getWeeklySetsCount();
+  }
+  var pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
+  var reached = target > 0 && current >= target;
+  var fmt = function(n) { return (Math.round(n * 10) / 10).toLocaleString('pl'); };
+  return {
+    current: current, target: target, pct: pct, reached: reached, unit: unit,
+    displayCurrent: fmt(current), displayTarget: fmt(target)
+  };
+}
+
 function updateProgressAfterWorkout(workout) {
   addTimelineEvent({
     type: 'workout',

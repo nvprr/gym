@@ -948,13 +948,32 @@ function selectZamEx(id) {
 }
 
 // ── KALKULATORY ──
+// Modułowa architektura: każdy kalkulator to wpis w KALKULATORY_LIST (kafelek)
+// + funkcja renderująca w KALKULATORY_RENDERERS. Aby dodać kolejny kalkulator,
+// wystarczy dopisać wpis do listy i funkcję renderKalkXxx(el).
+var KALKULATORY_LIST = [
+  { key:'1rm',      icon:'🏋️', title:'Kalkulator 1RM',    sub:'Oblicz swój maksymalny ciężar' },
+  { key:'objetosc', icon:'📊', title:'Objętość treningowa', sub:'Ciężar × Serie × Powtórzenia' },
+  { key:'tdee',     icon:'🔥', title:'TDEE',                sub:'Całkowite dzienne zapotrzebowanie kaloryczne' },
+  { key:'makro',    icon:'🍗', title:'Makroskładniki',      sub:'Białko / węglowodany / tłuszcze' },
+  { key:'bmi',      icon:'⚖️', title:'BMI',                 sub:'Wskaźnik masy ciała' },
+  { key:'ffmi',     icon:'💪', title:'FFMI',                sub:'Wskaźnik beztłuszczowej masy ciała' },
+  { key:'tempo',    icon:'🏃', title:'Tempo biegu',         sub:'Tempo i przewidywane czasy na dystansach' },
+];
+
+var KALKULATORY_RENDERERS = {
+  '1rm':      renderKalk1RM,
+  'objetosc': renderKalkObjetosc,
+  'tdee':     renderKalkTDEE,
+  'makro':    renderKalkMakro,
+  'bmi':      renderKalkBMI,
+  'ffmi':     renderKalkFFMI,
+  'tempo':    renderKalkTempo,
+};
+
 function renderWiecejKalkulatory(el) {
-  var calcs = [
-    { key:'1rm',      icon:'🏋️', title:'Kalkulator 1RM',          sub:'Oblicz swój maksymalny ciężar' },
-    { key:'objetosc', icon:'📊', title:'Objętość treningowa',       sub:'Ciężar × Serie × Powtórzenia' },
-  ];
   var html = '<div style="padding:0 16px;">';
-  calcs.forEach(function(c) {
+  KALKULATORY_LIST.forEach(function(c) {
     html += '<div onclick="showKalkulator(\''+c.key+'\')" style="background:var(--surface2);border-radius:16px;padding:16px;margin-bottom:10px;cursor:pointer;display:flex;align-items:center;gap:14px;">'
       + '<span style="font-size:32px;">'+c.icon+'</span>'
       + '<div><div style="font-size:15px;font-weight:700;">'+c.title+'</div>'
@@ -967,16 +986,21 @@ function renderWiecejKalkulatory(el) {
 }
 
 function showKalkulator(key) {
-  var titles = { '1rm':'🏋️ Kalkulator 1RM', 'objetosc':'📊 Objętość treningowa' };
+  var cfg = KALKULATORY_LIST.find(function(c){ return c.key===key; });
   var titleEl = document.getElementById('wiecej-subview-title');
-  if (titleEl) titleEl.textContent = titles[key] || key;
+  if (titleEl) titleEl.textContent = cfg ? (cfg.icon+' '+cfg.title) : key;
   var content = document.getElementById('wiecej-subview-content');
   if (!content) return;
   content.innerHTML = '<button onclick="showWiecej(\'kalkulatory\')" style="background:none;border:none;color:var(--accent);font-size:14px;cursor:pointer;padding:0 16px 12px;">← Kalkulatory</button>'
     + '<div id="kalk-content"></div>';
   var sec = document.getElementById('kalk-content');
-  if (key === '1rm')      renderKalk1RM(sec);
-  if (key === 'objetosc') renderKalkObjetosc(sec);
+  var renderFn = KALKULATORY_RENDERERS[key];
+  if (renderFn) renderFn(sec);
+}
+
+// Pomocnicze: ostatni wpis pomiarów (waga/wzrost) do wstępnego uzupełnienia pól
+function _kalkLatestMeasurement() {
+  return typeof getLatestMeasurementEntry === 'function' ? getLatestMeasurementEntry() : null;
 }
 
 function renderKalk1RM(el) {
@@ -1057,5 +1081,300 @@ function calcObjetosc() {
 
 function _kObjStat(label, val) {
   return '<div style="text-align:center;"><div style="font-size:11px;color:var(--text3);">'+label+'</div><div style="font-size:15px;font-weight:700;">'+val+'</div></div>';
+}
+
+// ── TDEE ──
+function renderKalkTDEE(el) {
+  var m = _kalkLatestMeasurement();
+  var defW = m && m.weight != null ? m.weight : '';
+  var defH = m && m.height != null ? m.height : '';
+  var defGender = (state.settings && state.settings.gender) || 'male';
+  el.innerHTML =
+    '<div style="padding:0 16px;">'
+    + '<div class="card">'
+    +   '<div style="font-size:13px;color:var(--text3);margin-bottom:12px;">Oblicz całkowite dzienne zapotrzebowanie kaloryczne (formuła Mifflin-St Jeor).</div>'
+    +   '<div style="display:flex;gap:8px;margin-bottom:10px;">'
+    +     '<div style="flex:1;"><label class="form-label">Waga (kg)</label><input id="tdee-weight" class="form-input" type="number" step="0.1" value="'+defW+'" placeholder="80" oninput="calcTDEE()"></div>'
+    +     '<div style="flex:1;"><label class="form-label">Wzrost (cm)</label><input id="tdee-height" class="form-input" type="number" step="0.1" value="'+defH+'" placeholder="180" oninput="calcTDEE()"></div>'
+    +   '</div>'
+    +   '<div style="display:flex;gap:8px;margin-bottom:10px;">'
+    +     '<div style="flex:1;"><label class="form-label">Wiek</label><input id="tdee-age" class="form-input" type="number" min="1" placeholder="25" oninput="calcTDEE()"></div>'
+    +     '<div style="flex:1;"><label class="form-label">Płeć</label><select id="tdee-gender" class="form-input" onchange="calcTDEE()">'
+    +       '<option value="male"'+(defGender==='male'?' selected':'')+'>Mężczyzna</option>'
+    +       '<option value="female"'+(defGender==='female'?' selected':'')+'>Kobieta</option>'
+    +     '</select></div>'
+    +   '</div>'
+    +   '<div class="form-group" style="margin-bottom:10px;"><label class="form-label">Poziom aktywności</label>'
+    +     '<select id="tdee-activity" class="form-input" onchange="calcTDEE()">'
+    +       '<option value="1.2">Siedzący (brak aktywności)</option>'
+    +       '<option value="1.375">Lekko aktywny (1-3x/tydz.)</option>'
+    +       '<option value="1.55" selected>Umiarkowanie aktywny (3-5x/tydz.)</option>'
+    +       '<option value="1.725">Bardzo aktywny (6-7x/tydz.)</option>'
+    +       '<option value="1.9">Ekstremalnie aktywny (sport + praca fizyczna)</option>'
+    +     '</select>'
+    +   '</div>'
+    +   '<div id="tdee-result"></div>'
+    + '</div>'
+    + '</div>';
+  calcTDEE();
+}
+
+function calcTDEE() {
+  var w = parseFloat(document.getElementById('tdee-weight').value);
+  var h = parseFloat(document.getElementById('tdee-height').value);
+  var age = parseFloat(document.getElementById('tdee-age').value);
+  var gender = document.getElementById('tdee-gender').value;
+  var act = parseFloat(document.getElementById('tdee-activity').value);
+  var el = document.getElementById('tdee-result');
+  if (!el) return;
+  if (!w || !h || !age) { el.innerHTML=''; return; }
+  var bmr = gender==='male' ? (10*w + 6.25*h - 5*age + 5) : (10*w + 6.25*h - 5*age - 161);
+  var tdee = bmr * act;
+  el.innerHTML =
+    '<div style="background:var(--surface2);border-radius:12px;padding:14px;margin-bottom:10px;text-align:center;">'
+    + '<div style="font-size:13px;color:var(--text3);">Twoje TDEE</div>'
+    + '<div style="font-size:36px;font-weight:800;color:var(--accent);">'+Math.round(tdee)+' kcal</div>'
+    + '<div style="font-size:12px;color:var(--text3);margin-top:4px;">BMR: '+Math.round(bmr)+' kcal</div>'
+    + '</div>'
+    + '<div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Kalorie wg celu</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">'
+    + _kObjStat('📉 Redukcja', Math.round(tdee*0.8)+' kcal')
+    + _kObjStat('⚖️ Utrzymanie', Math.round(tdee)+' kcal')
+    + _kObjStat('📈 Masa', Math.round(tdee*1.15)+' kcal')
+    + '</div>';
+}
+
+// ── MAKROSKŁADNIKI ──
+function renderKalkMakro(el) {
+  var m = _kalkLatestMeasurement();
+  var defW = m && m.weight != null ? m.weight : '';
+  var defH = m && m.height != null ? m.height : '';
+  var defGender = (state.settings && state.settings.gender) || 'male';
+  el.innerHTML =
+    '<div style="padding:0 16px;">'
+    + '<div class="card">'
+    +   '<div style="font-size:13px;color:var(--text3);margin-bottom:12px;">Rozkład makroskładników na podstawie TDEE i wybranego celu.</div>'
+    +   '<div style="display:flex;gap:8px;margin-bottom:10px;">'
+    +     '<div style="flex:1;"><label class="form-label">Waga (kg)</label><input id="mak-weight" class="form-input" type="number" step="0.1" value="'+defW+'" placeholder="80" oninput="calcMakro()"></div>'
+    +     '<div style="flex:1;"><label class="form-label">Wzrost (cm)</label><input id="mak-height" class="form-input" type="number" step="0.1" value="'+defH+'" placeholder="180" oninput="calcMakro()"></div>'
+    +   '</div>'
+    +   '<div style="display:flex;gap:8px;margin-bottom:10px;">'
+    +     '<div style="flex:1;"><label class="form-label">Wiek</label><input id="mak-age" class="form-input" type="number" min="1" placeholder="25" oninput="calcMakro()"></div>'
+    +     '<div style="flex:1;"><label class="form-label">Płeć</label><select id="mak-gender" class="form-input" onchange="calcMakro()">'
+    +       '<option value="male"'+(defGender==='male'?' selected':'')+'>Mężczyzna</option>'
+    +       '<option value="female"'+(defGender==='female'?' selected':'')+'>Kobieta</option>'
+    +     '</select></div>'
+    +   '</div>'
+    +   '<div class="form-group" style="margin-bottom:10px;"><label class="form-label">Poziom aktywności</label>'
+    +     '<select id="mak-activity" class="form-input" onchange="calcMakro()">'
+    +       '<option value="1.2">Siedzący</option>'
+    +       '<option value="1.375">Lekko aktywny</option>'
+    +       '<option value="1.55" selected>Umiarkowanie aktywny</option>'
+    +       '<option value="1.725">Bardzo aktywny</option>'
+    +       '<option value="1.9">Ekstremalnie aktywny</option>'
+    +     '</select>'
+    +   '</div>'
+    +   '<div class="form-group" style="margin-bottom:10px;"><label class="form-label">Cel</label>'
+    +     '<select id="mak-goal" class="form-input" onchange="calcMakro()">'
+    +       '<option value="cut">Redukcja</option>'
+    +       '<option value="maint" selected>Utrzymanie</option>'
+    +       '<option value="bulk">Masa</option>'
+    +     '</select>'
+    +   '</div>'
+    +   '<div id="makro-result"></div>'
+    + '</div>'
+    + '</div>';
+  calcMakro();
+}
+
+function calcMakro() {
+  var w = parseFloat(document.getElementById('mak-weight').value);
+  var h = parseFloat(document.getElementById('mak-height').value);
+  var age = parseFloat(document.getElementById('mak-age').value);
+  var gender = document.getElementById('mak-gender').value;
+  var act = parseFloat(document.getElementById('mak-activity').value);
+  var goal = document.getElementById('mak-goal').value;
+  var el = document.getElementById('makro-result');
+  if (!el) return;
+  if (!w || !h || !age) { el.innerHTML=''; return; }
+  var bmr = gender==='male' ? (10*w + 6.25*h - 5*age + 5) : (10*w + 6.25*h - 5*age - 161);
+  var tdee = bmr * act;
+  var calMult = goal==='cut' ? 0.8 : (goal==='bulk' ? 1.15 : 1);
+  var calories = tdee * calMult;
+  var proteinG = Math.round(w * 2);
+  var fatG = Math.round(calories * 0.25 / 9);
+  var proteinKcal = proteinG*4, fatKcal = fatG*9;
+  var carbsKcal = Math.max(0, calories - proteinKcal - fatKcal);
+  var carbsG = Math.round(carbsKcal/4);
+  var goalLabel = goal==='cut' ? 'Redukcja' : (goal==='bulk' ? 'Masa' : 'Utrzymanie');
+  el.innerHTML =
+    '<div style="background:var(--surface2);border-radius:12px;padding:14px;margin-bottom:12px;text-align:center;">'
+    + '<div style="font-size:13px;color:var(--text3);">Cel kaloryczny (' + goalLabel + ')</div>'
+    + '<div style="font-size:32px;font-weight:800;color:var(--accent);">'+Math.round(calories)+' kcal</div>'
+    + '</div>'
+    + '<div style="display:flex;flex-direction:column;gap:10px;">'
+    + _kMacroBar('🥩 Białko', proteinG, proteinKcal, calories, 'var(--red)')
+    + _kMacroBar('🍚 Węglowodany', carbsG, carbsKcal, calories, 'var(--accent)')
+    + _kMacroBar('🥑 Tłuszcze', fatG, fatKcal, calories, 'var(--yellow)')
+    + '</div>';
+}
+
+function _kMacroBar(label, grams, kcal, totalKcal, color) {
+  var pct = totalKcal > 0 ? Math.round(kcal/totalKcal*100) : 0;
+  return '<div>'
+    + '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;"><span style="color:var(--text3);">'+label+'</span><span style="font-weight:700;">'+grams+' g · '+pct+'%</span></div>'
+    + '<div style="background:var(--surface2);border-radius:4px;height:8px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:'+color+';border-radius:4px;"></div></div>'
+    + '</div>';
+}
+
+// ── BMI ──
+function renderKalkBMI(el) {
+  var m = _kalkLatestMeasurement();
+  var defW = m && m.weight != null ? m.weight : '';
+  var defH = m && m.height != null ? m.height : '';
+  el.innerHTML =
+    '<div style="padding:0 16px;">'
+    + '<div class="card">'
+    +   '<div style="font-size:13px;color:var(--text3);margin-bottom:12px;">Oblicz swój wskaźnik masy ciała (BMI).</div>'
+    +   '<div style="display:flex;gap:8px;margin-bottom:10px;">'
+    +     '<div style="flex:1;"><label class="form-label">Waga (kg)</label><input id="bmi-weight" class="form-input" type="number" step="0.1" value="'+defW+'" placeholder="80" oninput="calcBMI()"></div>'
+    +     '<div style="flex:1;"><label class="form-label">Wzrost (cm)</label><input id="bmi-height" class="form-input" type="number" step="0.1" value="'+defH+'" placeholder="180" oninput="calcBMI()"></div>'
+    +   '</div>'
+    +   '<div id="bmi-result"></div>'
+    + '</div>'
+    + '</div>';
+  calcBMI();
+}
+
+function calcBMI() {
+  var w = parseFloat(document.getElementById('bmi-weight').value);
+  var h = parseFloat(document.getElementById('bmi-height').value);
+  var el = document.getElementById('bmi-result');
+  if (!el) return;
+  if (!w || !h) { el.innerHTML=''; return; }
+  var hm = h/100;
+  var bmi = w/(hm*hm);
+  var cat, color;
+  if (bmi < 18.5)      { cat='Niedowaga'; color='var(--blue)'; }
+  else if (bmi < 25)   { cat='Norma';     color='var(--green)'; }
+  else if (bmi < 30)   { cat='Nadwaga';   color='var(--yellow)'; }
+  else                 { cat='Otyłość';   color='var(--red)'; }
+  el.innerHTML =
+    '<div style="background:var(--surface2);border-radius:12px;padding:16px;text-align:center;">'
+    + '<div style="font-size:13px;color:var(--text3);margin-bottom:4px;">Twoje BMI</div>'
+    + '<div style="font-size:36px;font-weight:800;color:'+color+';">'+bmi.toFixed(1)+'</div>'
+    + '<div style="font-size:14px;font-weight:700;color:'+color+';margin-top:4px;">'+cat+'</div>'
+    + '</div>';
+}
+
+// ── FFMI ──
+function renderKalkFFMI(el) {
+  var m = _kalkLatestMeasurement();
+  var defW = m && m.weight != null ? m.weight : '';
+  var defH = m && m.height != null ? m.height : '';
+  el.innerHTML =
+    '<div style="padding:0 16px;">'
+    + '<div class="card">'
+    +   '<div style="font-size:13px;color:var(--text3);margin-bottom:12px;">Fat-Free Mass Index — wskaźnik beztłuszczowej masy mięśniowej.</div>'
+    +   '<div style="display:flex;gap:8px;margin-bottom:10px;">'
+    +     '<div style="flex:1;"><label class="form-label">Waga (kg)</label><input id="ffmi-weight" class="form-input" type="number" step="0.1" value="'+defW+'" placeholder="80" oninput="calcFFMI()"></div>'
+    +     '<div style="flex:1;"><label class="form-label">Wzrost (cm)</label><input id="ffmi-height" class="form-input" type="number" step="0.1" value="'+defH+'" placeholder="180" oninput="calcFFMI()"></div>'
+    +   '</div>'
+    +   '<div class="form-group" style="margin-bottom:10px;"><label class="form-label">Tkanka tłuszczowa (%)</label><input id="ffmi-bf" class="form-input" type="number" step="0.1" placeholder="15" oninput="calcFFMI()"></div>'
+    +   '<div id="ffmi-result"></div>'
+    + '</div>'
+    + '</div>';
+  calcFFMI();
+}
+
+function calcFFMI() {
+  var w = parseFloat(document.getElementById('ffmi-weight').value);
+  var h = parseFloat(document.getElementById('ffmi-height').value);
+  var bf = parseFloat(document.getElementById('ffmi-bf').value);
+  var el = document.getElementById('ffmi-result');
+  if (!el) return;
+  if (!w || !h || isNaN(bf)) { el.innerHTML=''; return; }
+  var hm = h/100;
+  var leanMass = w * (1 - bf/100);
+  var ffmi = (leanMass / (hm*hm)) + 6.1*(1.8 - hm);
+  var interpretation, color;
+  if (ffmi < 18)       { interpretation='Poniżej przeciętnej';                              color='var(--blue)'; }
+  else if (ffmi < 20)  { interpretation='Przeciętna';                                       color='var(--text)'; }
+  else if (ffmi < 22)  { interpretation='Ponadprzeciętna';                                  color='var(--green)'; }
+  else if (ffmi < 25)  { interpretation='Bardzo dobra (blisko naturalnego limitu)';          color='var(--accent)'; }
+  else                 { interpretation='Wyjątkowo wysoka (powyżej typowego naturalnego zakresu)'; color='var(--yellow)'; }
+  el.innerHTML =
+    '<div style="background:var(--surface2);border-radius:12px;padding:16px;text-align:center;">'
+    + '<div style="font-size:13px;color:var(--text3);margin-bottom:4px;">Twój FFMI</div>'
+    + '<div style="font-size:36px;font-weight:800;color:'+color+';">'+ffmi.toFixed(1)+'</div>'
+    + '<div style="font-size:13px;font-weight:600;color:'+color+';margin-top:4px;">'+interpretation+'</div>'
+    + '<div style="font-size:11px;color:var(--text4);margin-top:8px;">Masa beztłuszczowa: '+leanMass.toFixed(1)+' kg</div>'
+    + '</div>';
+}
+
+// ── TEMPO BIEGU ──
+function renderKalkTempo(el) {
+  el.innerHTML =
+    '<div style="padding:0 16px;">'
+    + '<div class="card">'
+    +   '<div style="font-size:13px;color:var(--text3);margin-bottom:12px;">Podaj dystans i czas, aby obliczyć tempo oraz przewidywane wyniki na innych dystansach (formuła Riegela).</div>'
+    +   '<div class="form-group" style="margin-bottom:10px;"><label class="form-label">Dystans (km)</label><input id="tempo-dist" class="form-input" type="number" step="0.01" min="0.1" placeholder="5" oninput="calcTempoBiegu()"></div>'
+    +   '<div style="display:flex;gap:8px;margin-bottom:10px;">'
+    +     '<div style="flex:1;"><label class="form-label">Czas — minuty</label><input id="tempo-min" class="form-input" type="number" min="0" placeholder="25" oninput="calcTempoBiegu()"></div>'
+    +     '<div style="flex:1;"><label class="form-label">Czas — sekundy</label><input id="tempo-sec" class="form-input" type="number" min="0" max="59" placeholder="30" oninput="calcTempoBiegu()"></div>'
+    +   '</div>'
+    +   '<div id="tempo-result"></div>'
+    + '</div>'
+    + '</div>';
+}
+
+function _fmtPace(secPerKm) {
+  var mm = Math.floor(secPerKm/60);
+  var ss = Math.round(secPerKm%60);
+  if (ss === 60) { mm++; ss = 0; }
+  return mm+':'+(ss<10?'0':'')+ss+' /km';
+}
+
+function _fmtDuration(totalSec) {
+  var h = Math.floor(totalSec/3600);
+  var m = Math.floor((totalSec%3600)/60);
+  var s = Math.round(totalSec%60);
+  if (s === 60) { s = 0; m++; }
+  if (m === 60) { m = 0; h++; }
+  var mm = (m<10?'0':'')+m;
+  var ss = (s<10?'0':'')+s;
+  return h > 0 ? (h+':'+mm+':'+ss) : (mm+':'+ss);
+}
+
+function calcTempoBiegu() {
+  var dist = parseFloat(document.getElementById('tempo-dist').value);
+  var min = parseFloat(document.getElementById('tempo-min').value) || 0;
+  var sec = parseFloat(document.getElementById('tempo-sec').value) || 0;
+  var el = document.getElementById('tempo-result');
+  if (!el) return;
+  var totalSec = min*60 + sec;
+  if (!dist || !totalSec) { el.innerHTML=''; return; }
+  var paceSecPerKm = totalSec / dist;
+  var distances = [
+    { label:'5 km',        km:5 },
+    { label:'10 km',       km:10 },
+    { label:'Półmaraton',  km:21.0975 },
+    { label:'Maraton',     km:42.195 }
+  ];
+  var predHtml = distances.map(function(d) {
+    var predSec = totalSec * Math.pow(d.km/dist, 1.06);
+    var isCurrent = Math.abs(d.km-dist) < 0.05;
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:.5px solid var(--border2);">'
+      + '<span style="font-size:13px;color:var(--text3);">'+d.label+(isCurrent?' <span style="color:var(--accent);">(Twój wynik)</span>':'')+'</span>'
+      + '<span style="font-size:14px;font-weight:700;">'+_fmtDuration(predSec)+'</span>'
+      + '</div>';
+  }).join('');
+  el.innerHTML =
+    '<div style="background:var(--surface2);border-radius:12px;padding:14px;margin-bottom:12px;text-align:center;">'
+    + '<div style="font-size:13px;color:var(--text3);">Twoje tempo</div>'
+    + '<div style="font-size:32px;font-weight:800;color:var(--accent);">'+_fmtPace(paceSecPerKm)+'</div>'
+    + '</div>'
+    + '<div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Przewidywane czasy</div>'
+    + predHtml;
 }
 
