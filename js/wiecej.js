@@ -841,66 +841,110 @@ var ZAMIENNIKI = {
   'n6':  ['p238','p264','p261'],
 };
 
-var _zamSearch = '';
-var _zamSelected = null;
+var _zamMuscle = null;
+var _zamExId   = null;
 
+var ZAM_MUSCLE_ICONS = {
+  'Klatka':'🎯','Plecy':'🔙','Barki':'🏋️','Biceps':'💪','Triceps':'💪',
+  'Nogi':'🦵','Pośladki':'🍑','Brzuch':'🧱','Łydki':'🦶'
+};
+var ZAM_MUSCLE_ORDER = ['Klatka','Plecy','Barki','Biceps','Triceps','Nogi','Pośladki','Brzuch','Łydki'];
+
+// Poziom 1: lista partii mięśniowych
 function renderBibZamienniki(el) {
-  el.innerHTML =
-    '<div style="padding:0 16px;">'
-    + '<input id="zam-search" class="form-input" placeholder="🔍 Szukaj ćwiczenia..." style="margin-bottom:12px;" oninput="_zamSearch=this.value;renderZamList()">'
-    + '<div id="zam-list"></div>'
-    + '<div id="zam-results"></div>'
-    + '</div>';
-  renderZamList();
+  _zamMuscle = null;
+  _zamExId   = null;
+  el.innerHTML = '<div id="zam-nav"></div>';
+  renderZamMuscles();
 }
 
-function renderZamList() {
-  var el = document.getElementById('zam-list');
-  var resEl = document.getElementById('zam-results');
-  if (!el) return;
-  var q = _zamSearch.toLowerCase();
-  if (!q) { el.innerHTML='<div style="text-align:center;padding:16px;color:var(--text4);font-size:13px;">Wpisz nazwę ćwiczenia lub wybierz z listy</div>'; if(resEl)resEl.innerHTML=''; return; }
+function renderZamMuscles() {
+  var nav = document.getElementById('zam-nav');
+  if (!nav) return;
   var all = typeof getAllExercises==='function' ? getAllExercises() : EXERCISES;
-  var list = all.filter(function(ex){ return ex.name.toLowerCase().indexOf(q)!==-1 || (ex.muscle||'').toLowerCase().indexOf(q)!==-1; }).slice(0,12);
-  if (!list.length) { el.innerHTML='<div style="text-align:center;padding:16px;color:var(--text4);">Brak wyników</div>'; if(resEl)resEl.innerHTML=''; return; }
-  el.innerHTML = list.map(function(ex) {
-    var hasAlts = !!ZAMIENNIKI[ex.id];
-    return '<div onclick="selectZamEx(\''+ex.id+'\')" style="background:var(--surface2);border-radius:12px;padding:12px 14px;margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">'
-      + '<div><div style="font-weight:600;font-size:13px;">'+ex.name+'</div>'
-      + '<div style="font-size:11px;color:var(--text3);">'+ex.muscle+(hasAlts?' · <span style="color:var(--accent);">'+ZAMIENNIKI[ex.id].length+' zamienników</span>':'')+'</div></div>'
-      + '<div style="color:var(--text4);">›</div>'
+  var counts = {};
+  Object.keys(ZAMIENNIKI).forEach(function(id) {
+    var ex = all.find(function(e){ return e.id===id; });
+    if (!ex) return;
+    var m = ex.muscle || 'Inne';
+    counts[m] = (counts[m]||0) + 1;
+  });
+  var html = '<div style="padding:0 16px;">'
+    + '<div style="font-size:13px;color:var(--text3);margin-bottom:12px;">Wybierz partię mięśniową, aby znaleźć zamienniki ćwiczeń.</div>';
+  var any = false;
+  ZAM_MUSCLE_ORDER.forEach(function(m) {
+    if (!counts[m]) return;
+    any = true;
+    html += '<div onclick="selectZamMuscle(\''+m+'\')" style="background:var(--surface2);border-radius:16px;padding:14px 16px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:14px;">'
+      + '<span style="font-size:28px;">'+(ZAM_MUSCLE_ICONS[m]||'💪')+'</span>'
+      + '<div style="flex:1;"><div style="font-size:15px;font-weight:700;">'+m+'</div>'
+      + '<div style="font-size:12px;color:var(--text3);margin-top:2px;">'+counts[m]+' ćwiczeń z zamiennikami</div></div>'
+      + '<div style="color:var(--text4);font-size:20px;">›</div>'
       + '</div>';
-  }).join('');
-  if (resEl) resEl.innerHTML = '';
+  });
+  if (!any) html += '<div style="text-align:center;padding:24px;color:var(--text4);">Brak danych o zamiennikach.</div>';
+  html += '</div>';
+  nav.innerHTML = html;
 }
 
+// Poziom 2: lista ćwiczeń danej partii (tylko te posiadające zamienniki w bazie)
+function selectZamMuscle(muscle) {
+  _zamMuscle = muscle;
+  _zamExId   = null;
+  var nav = document.getElementById('zam-nav');
+  if (!nav) return;
+  var all = typeof getAllExercises==='function' ? getAllExercises() : EXERCISES;
+  var list = Object.keys(ZAMIENNIKI)
+    .map(function(id){ return all.find(function(e){ return e.id===id; }); })
+    .filter(function(ex){ return ex && ex.muscle===muscle; });
+  var html = '<button onclick="renderZamMuscles()" style="background:none;border:none;color:var(--accent);font-size:14px;cursor:pointer;padding:0 16px 12px;">← Partie mięśniowe</button>'
+    + '<div style="padding:0 16px;">'
+    + '<div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">'+(ZAM_MUSCLE_ICONS[muscle]||'')+' '+muscle+'</div>';
+  if (!list.length) {
+    html += '<div style="text-align:center;padding:24px;color:var(--text4);">Brak ćwiczeń w tej partii.</div>';
+  } else {
+    list.forEach(function(ex) {
+      html += '<div onclick="selectZamEx(\''+ex.id+'\')" style="background:var(--surface2);border-radius:12px;padding:12px 14px;margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">'
+        + '<div><div style="font-weight:600;font-size:13px;">'+ex.name+'</div>'
+        + '<div style="font-size:11px;color:var(--text3);">'+(ex.sub||ex.muscle)+' · <span style="color:var(--accent);">'+ZAMIENNIKI[ex.id].length+' zamienników</span></div></div>'
+        + '<div style="color:var(--text4);">›</div>'
+        + '</div>';
+    });
+  }
+  html += '</div>';
+  nav.innerHTML = html;
+}
+
+// Poziom 3: zamienniki dla wybranego ćwiczenia
 function selectZamEx(id) {
+  _zamExId = id;
   var all = typeof getAllExercises==='function' ? getAllExercises() : EXERCISES;
   var ex = all.find(function(e){ return e.id===id; });
-  var resEl = document.getElementById('zam-results');
-  if (!resEl || !ex) return;
+  var nav = document.getElementById('zam-nav');
+  if (!nav || !ex) return;
   var altIds = ZAMIENNIKI[id] || [];
-  if (!altIds.length) {
-    resEl.innerHTML = '<div style="background:var(--surface2);border-radius:14px;padding:16px;margin-top:8px;text-align:center;color:var(--text3);">Brak zamienników w bazie.</div>';
-    return;
-  }
   var levelDots = {'łatwy':'🟢','średni':'🟡','zaawansowany':'🔴'};
   var equipMap  = {'wielostawowe':'Sztanga/Hantle','izolacyjne':'Maszyna/Wyciąg','kalisteniczne':'Masa ciała','cardio':'Brak sprzętu'};
-  var html = '<div style="margin-top:12px;">'
+  var html = '<button onclick="selectZamMuscle(\''+_zamMuscle+'\')" style="background:none;border:none;color:var(--accent);font-size:14px;cursor:pointer;padding:0 16px 12px;">← '+_zamMuscle+'</button>'
+    + '<div style="padding:0 16px;">'
     + '<div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text3);">Zamienniki dla: <span style="color:var(--text);">'+ex.name+'</span></div>';
-  altIds.forEach(function(altId) {
-    var alt = all.find(function(e){ return e.id===altId; });
-    if (!alt) return;
-    html += '<div onclick="openBibDetail(\''+altId+'\')" style="background:var(--surface2);border-radius:12px;padding:12px 14px;margin-bottom:6px;cursor:pointer;">'
-      + '<div style="font-weight:600;font-size:13px;margin-bottom:4px;">'+alt.name+'</div>'
-      + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
-      + '<span style="background:var(--accent-light);color:var(--accent);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600;">'+(alt.sub||alt.muscle)+'</span>'
-      + '<span style="background:var(--surface);border-radius:20px;padding:2px 8px;font-size:11px;color:var(--text3);">'+(equipMap[alt.category]||alt.category||'')+'</span>'
-      + '<span style="font-size:11px;color:var(--text4);">'+(levelDots[alt.level]||'🟡')+' '+(alt.level||'')+'</span>'
-      + '</div></div>';
-  });
+  if (!altIds.length) {
+    html += '<div style="background:var(--surface2);border-radius:14px;padding:16px;text-align:center;color:var(--text3);">Brak zamienników w bazie.</div>';
+  } else {
+    altIds.forEach(function(altId) {
+      var alt = all.find(function(e){ return e.id===altId; });
+      if (!alt) return;
+      html += '<div onclick="openBibDetail(\''+altId+'\')" style="background:var(--surface2);border-radius:12px;padding:12px 14px;margin-bottom:6px;cursor:pointer;">'
+        + '<div style="font-weight:600;font-size:13px;margin-bottom:4px;">'+alt.name+'</div>'
+        + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+        + '<span style="background:var(--accent-light);color:var(--accent);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600;">'+(alt.sub||alt.muscle)+'</span>'
+        + '<span style="background:var(--surface);border-radius:20px;padding:2px 8px;font-size:11px;color:var(--text3);">'+(equipMap[alt.category]||alt.category||'')+'</span>'
+        + '<span style="font-size:11px;color:var(--text4);">'+(levelDots[alt.level]||'🟡')+' '+(alt.level||'')+'</span>'
+        + '</div></div>';
+    });
+  }
   html += '</div>';
-  resEl.innerHTML = html;
+  nav.innerHTML = html;
 }
 
 // ── KALKULATORY ──
