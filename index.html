@@ -23,6 +23,14 @@
 #update-banner button{background:rgba(255,255,255,.25);border:none;color:#fff;padding:6px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-left:10px;}
 </style>
 <style>
+/* Konfetti — celebracja osiągnięcia Aktualnego celu */
+.confetti-piece{position:fixed;top:-24px;pointer-events:none;z-index:99999;animation:confetti-fall 2.2s ease-in forwards;will-change:transform,opacity;}
+@keyframes confetti-fall{
+  0%{transform:translateY(0) rotate(0deg);opacity:1;}
+  100%{transform:translateY(112vh) rotate(360deg);opacity:0;}
+}
+</style>
+<style>
 /* Wykresy — brakujący CSS */
 .chart-wrap{margin-bottom:16px}
 .bar-chart{display:flex;align-items:flex-end;gap:3px;height:80px;background:var(--surface2);border-radius:10px;padding:8px 8px 0;overflow:hidden}
@@ -636,7 +644,7 @@
 
 <script>
 // ── Stan aplikacji (globalny) ──
-const DEFAULT_DASHBOARD_ORDER = ['statistics','weeklyGoals','lastWorkout','regeneration','hydration','activePlans','miniCalendar','recentRecords','aiCoach'];
+const DEFAULT_DASHBOARD_ORDER = ['activeGoal','statistics','weeklyGoals','lastWorkout','regeneration','hydration','activePlans','miniCalendar','recentRecords','aiCoach'];
 
 let state = {
   plans:[], workouts:[], customExercises:[], weights:[], measurements:[], goals:[], timeline:[],
@@ -644,7 +652,8 @@ let state = {
     theme:'dark', gender:'male', vibration:true, sound:true,
     restCompound:90, restIsolation:60, restAbs:45,
     username:'GymFlow', avatar:'🦁',
-    dashboardOrder:DEFAULT_DASHBOARD_ORDER.slice(), dashboardHidden:[], dashboardGoal:4
+    dashboardOrder:DEFAULT_DASHBOARD_ORDER.slice(), dashboardHidden:[], dashboardGoal:4,
+    activeGoal:null
   },
   activeWorkout:null, editingPlan:null, currentPlanIdx:null, editingDayIdx:null,
   selectedExercise:null, exercisePickerFrom:null,
@@ -733,6 +742,34 @@ function restoreBackup_trigger(){ document.getElementById('restore-file').value=
     </div>
     <div class="form-group"><label class="form-label">Wartość docelowa</label><input class="form-input" type="number" id="goal-target-input" placeholder="100"></div>
     <div class="form-group" id="goal-ex-row" style="display:none;"><label class="form-label">Ćwiczenie</label><input class="form-input" id="goal-ex-input" placeholder="np. Bench Press"></div>
+  </div>
+</div>
+
+<!-- ACTIVE GOAL SHEET (widget na dashboardzie) -->
+<div class="sheet" id="active-goal-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <button class="btn btn-ghost" style="padding:0;" onclick="closeAllSheets()">✕</button>
+    <div class="sheet-title">🎯 Aktualny cel</div>
+    <button class="btn btn-ghost" style="padding:0;" onclick="saveActiveGoal()">Zapisz</button>
+  </div>
+  <div class="sheet-body">
+    <div class="form-group"><label class="form-label">Typ celu</label>
+      <select class="form-input" id="ag-type-input" onchange="onActiveGoalTypeChange()">
+        <option value="exercise">🏋️ Ciężar w ćwiczeniu</option>
+        <option value="bodyweight">⚖️ Masa ciała</option>
+        <option value="workoutsMonth">📅 Treningi w miesiącu</option>
+        <option value="tonnage">🏋️‍♂️ Tonaż</option>
+        <option value="weeklySets">🔁 Serie tygodniowo</option>
+      </select>
+    </div>
+    <div class="form-group" id="ag-ex-row">
+      <label class="form-label">Ćwiczenie</label>
+      <input class="form-input" id="ag-ex-input" list="ag-ex-list" placeholder="np. Bench Press">
+      <datalist id="ag-ex-list"></datalist>
+    </div>
+    <div class="form-group"><label class="form-label" id="ag-target-label">Wartość docelowa</label><input class="form-input" type="number" step="0.5" id="ag-target-input" placeholder="100"></div>
+    <button class="btn btn-secondary" style="width:100%;margin-top:6px;display:none;" id="ag-clear-btn" onclick="clearActiveGoal()">Usuń aktualny cel</button>
   </div>
 </div>
 
