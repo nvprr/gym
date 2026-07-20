@@ -13,23 +13,13 @@ var CARDIO_TYPES = [
   { key:'other', icon:'❤️', label:'Inne' },
 ];
 
-var CARDIO_TIPS = [
-  'Spróbuj wydłużyć dystans o 5% następnym razem.',
-  'Regularność jest ważniejsza niż jednorazowo długi trening.',
-  'Zmienne tempo (interwały) urozmaici trening i poprawi wydolność.',
-  'Pamiętaj o rozgrzewce przed dłuższym wysiłkiem.',
-  'Nawodnienie przed i po treningu cardio wspiera regenerację.',
-  'Spróbuj innego typu aktywności, żeby odciążyć te same partie ciała.',
-  'Krótkie, częste sesje cardio bywają skuteczniejsze niż rzadkie maratony.',
-  'Śledź swoje tempo — nawet małe usprawnienia się sumują z czasem.',
-  'Trening cardio dzień po siłowni pomaga w regeneracji (aktywny odpoczynek).',
-  'Nie musisz codziennie bić rekordów — stały rytm buduje formę.',
-];
+// Podpowiedzi po zapisaniu aktywności — patrz getCardioTipMessage() niżej (reguły, bez losowości).
 
 // ── Zmienne UI ──
 var _cardioType = 'run';
 var _cardioEditId = null;
 var _cardioChartMode = 'distance'; // 'distance' | 'duration'
+var _cardioChartWeeks = []; // dane ostatnich 6 tygodni (do obsługi kliknięcia w punkt wykresu)
 
 function _cardioTypeInfo(key) {
   return CARDIO_TYPES.find(function(t) { return t.key === key; }) || CARDIO_TYPES[CARDIO_TYPES.length - 1];
@@ -76,7 +66,7 @@ function renderCardioChart() {
   for (var i = 5; i >= 0; i--) {
     var wStart = new Date(thisMonday); wStart.setDate(wStart.getDate() - i * 7);
     var wEnd = new Date(wStart); wEnd.setDate(wEnd.getDate() + 7);
-    weeks.push({ start: wStart, end: wEnd, distance: 0, duration: 0 });
+    weeks.push({ start: wStart, end: wEnd, distance: 0, duration: 0, count: 0 });
   }
   acts.forEach(function(a) {
     var d = new Date(a.date);
@@ -84,31 +74,75 @@ function renderCardioChart() {
       if (d >= weeks[j].start && d < weeks[j].end) {
         weeks[j].distance += parseFloat(a.distance) || 0;
         weeks[j].duration += parseFloat(a.duration) || 0;
+        weeks[j].count++;
         break;
       }
     }
   });
+  _cardioChartWeeks = weeks;
 
   var vals = weeks.map(function(w) { return _cardioChartMode === 'distance' ? w.distance : w.duration; });
   var max = Math.max.apply(null, vals.concat([1]));
 
-  var bars = weeks.map(function(w, idx) {
-    var v = vals[idx];
-    var h = v > 0 ? Math.max(4, Math.round(v / max * 100)) : 2;
-    var label = w.start.toLocaleDateString('pl', { day: 'numeric', month: 'numeric' });
-    var tip = _cardioChartMode === 'distance' ? v.toFixed(1) + ' km' : _fmtCardioDuration(v);
-    return '<div class="bar-chart-bar" style="height:' + h + '%;background:' + (v > 0 ? 'var(--accent)' : 'var(--surface3)') + ';" data-tip="' + label + ' · ' + tip + '"></div>';
+  var W = 320, H = 170, padX = 26, padTop = 34, padBottom = 28;
+  var stepX = weeks.length > 1 ? (W - padX * 2) / (weeks.length - 1) : 0;
+  var chartH = H - padTop - padBottom;
+  var points = vals.map(function(v, idx) {
+    var x = padX + stepX * idx;
+    var y = padTop + (max > 0 ? (1 - v / max) : 1) * chartH;
+    return { x: x, y: y, v: v };
+  });
+
+  var pathD = points.map(function(p, idx) { return (idx === 0 ? 'M' : 'L') + p.x.toFixed(1) + ' ' + p.y.toFixed(1); }).join(' ');
+
+  var dotsSvg = points.map(function(p, idx) {
+    var label = _cardioChartMode === 'distance' ? (p.v > 0 ? p.v.toFixed(1) : '0') : (p.v > 0 ? Math.round(p.v) : '0');
+    var wLabel = weeks[idx].start.toLocaleDateString('pl', { day: 'numeric', month: 'numeric' });
+    return '<g onclick="showCardioWeekDetail(' + idx + ')" style="cursor:pointer;">'
+      +   '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="16" fill="transparent"></circle>'
+      +   '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="6" fill="' + (p.v > 0 ? 'var(--accent)' : 'var(--surface3)') + '" stroke="var(--surface2)" stroke-width="2"></circle>'
+      +   '<text x="' + p.x.toFixed(1) + '" y="' + (p.y - 14).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="700" fill="var(--text)">' + label + '</text>'
+      +   '<text x="' + p.x.toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10" fill="var(--text4)">' + wLabel + '</text>'
+      + '</g>';
   }).join('');
 
+  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block;min-height:150px;">'
+    +   '<path d="' + pathD + '" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0.4"></path>'
+    +   dotsSvg
+    + '</svg>';
+
   el.innerHTML =
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
     +   '<div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Ostatnie 6 tygodni</div>'
     +   '<div class="segment" style="width:auto;">'
     +     '<button class="segment-btn' + (_cardioChartMode === 'distance' ? ' active' : '') + '" style="padding:4px 10px;font-size:12px;" onclick="setCardioChartMode(\'distance\')">Dystans</button>'
     +     '<button class="segment-btn' + (_cardioChartMode === 'duration' ? ' active' : '') + '" style="padding:4px 10px;font-size:12px;" onclick="setCardioChartMode(\'duration\')">Czas</button>'
     +   '</div>'
     + '</div>'
-    + '<div class="bar-chart">' + bars + '</div>';
+    + svg
+    + '<div id="cardio-week-detail"></div>';
+}
+
+function showCardioWeekDetail(idx) {
+  var weeks = _cardioChartWeeks || [];
+  var w = weeks[idx];
+  var el = document.getElementById('cardio-week-detail');
+  if (!w || !el) return;
+  var endInclusive = new Date(w.end.getTime() - 86400000);
+  var rangeLabel = w.start.toLocaleDateString('pl', { day: 'numeric', month: 'short' }) + ' – ' + endInclusive.toLocaleDateString('pl', { day: 'numeric', month: 'short' });
+  if (!w.count) {
+    el.innerHTML = '<div style="background:var(--surface2);border-radius:12px;padding:12px 14px;margin-top:10px;text-align:center;color:var(--text3);font-size:13px;">Brak aktywności w tygodniu ' + rangeLabel + '</div>';
+    return;
+  }
+  el.innerHTML =
+    '<div style="background:var(--surface2);border-radius:12px;padding:12px 14px;margin-top:10px;">'
+    +   '<div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px;">Tydzień ' + rangeLabel + '</div>'
+    +   '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">'
+    +     '<div style="text-align:center;"><div style="font-size:15px;font-weight:700;">' + w.count + '</div><div style="font-size:11px;color:var(--text3);">Aktywności</div></div>'
+    +     '<div style="text-align:center;"><div style="font-size:15px;font-weight:700;">' + _fmtCardioDuration(w.duration) + '</div><div style="font-size:11px;color:var(--text3);">Czas</div></div>'
+    +     '<div style="text-align:center;"><div style="font-size:15px;font-weight:700;">' + w.distance.toFixed(1) + ' km</div><div style="font-size:11px;color:var(--text3);">Dystans</div></div>'
+    +   '</div>'
+    + '</div>';
 }
 
 function setCardioChartMode(mode) {
@@ -128,13 +162,16 @@ function renderCardioHistory() {
     var t = _cardioTypeInfo(a.type);
     var dateStr = new Date(a.date).toLocaleDateString('pl', { day: 'numeric', month: 'short', year: 'numeric' });
     var distPart = (a.distance && a.distance > 0) ? (' · ' + (+a.distance).toFixed(2) + ' km') : '';
-    return '<div onclick="openCardioDetail(\'' + a.id + '\')" style="display:flex;align-items:center;gap:12px;background:var(--surface2);border-radius:14px;padding:12px 14px;margin-bottom:8px;cursor:pointer;">'
-      +   '<div style="font-size:26px;">' + t.icon + '</div>'
-      +   '<div style="flex:1;min-width:0;">'
-      +     '<div style="font-weight:700;font-size:14px;">' + t.label + '</div>'
-      +     '<div style="font-size:12px;color:var(--text3);margin-top:2px;">' + dateStr + ' · ' + _fmtCardioDuration(a.duration) + distPart + '</div>'
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+      +   '<div onclick="openCardioDetail(\'' + a.id + '\')" style="display:flex;align-items:center;flex:1;min-width:0;gap:12px;background:var(--surface2);border-radius:14px;padding:12px 14px;cursor:pointer;">'
+      +     '<div style="font-size:26px;">' + t.icon + '</div>'
+      +     '<div style="flex:1;min-width:0;">'
+      +       '<div style="font-weight:700;font-size:14px;">' + t.label + '</div>'
+      +       '<div style="font-size:12px;color:var(--text3);margin-top:2px;">' + dateStr + ' · ' + _fmtCardioDuration(a.duration) + distPart + '</div>'
+      +     '</div>'
+      +     '<div style="color:var(--text4);font-size:18px;">›</div>'
       +   '</div>'
-      +   '<div style="color:var(--text4);font-size:18px;">›</div>'
+      +   '<button onclick="event.stopPropagation();deleteCardioActivity(\'' + a.id + '\')" style="flex-shrink:0;background:rgba(255,69,58,.12);border:none;color:var(--red);font-size:14px;padding:11px 12px;border-radius:12px;cursor:pointer;">🗑</button>'
       + '</div>';
   }).join('');
 }
@@ -226,6 +263,7 @@ function saveCardioActivity() {
 
   if (!state.cardioActivities) state.cardioActivities = [];
 
+  var newActivity = null;
   if (_cardioEditId) {
     var existing = state.cardioActivities.find(function(a) { return a.id === _cardioEditId; });
     if (existing) {
@@ -236,14 +274,15 @@ function saveCardioActivity() {
       existing.note = note;
     }
   } else {
-    state.cardioActivities.push({
+    newActivity = {
       id: uid(),
       type: _cardioType,
       date: new Date(dateEl.value).toISOString(),
       duration: duration,
       distance: distance,
       note: note
-    });
+    };
+    state.cardioActivities.push(newActivity);
   }
 
   dbPut('cardio', { id: 'all', data: state.cardioActivities });
@@ -253,11 +292,31 @@ function saveCardioActivity() {
   renderCardioTab();
   if (typeof renderDashboardCards === 'function') renderDashboardCards();
   showNotif('✅', wasEdit ? 'Aktywność zaktualizowana' : 'Aktywność zapisana', '');
-  if (!wasEdit) showCardioTip();
+  if (!wasEdit && newActivity) showCardioTip(newActivity);
 }
 
-function showCardioTip() {
-  var tip = CARDIO_TIPS[Math.floor(Math.random() * CARDIO_TIPS.length)];
+// ── Podpowiedź po zapisaniu (statyczna, bez AI) ──
+function getCardioTipMessage(newActivity) {
+  var others = (state.cardioActivities || []).filter(function(a) { return a.id !== newActivity.id; });
+  if (!others.length) {
+    return 'Pierwszy krok jest najtrudniejszy. Tak trzymaj!';
+  }
+  var sorted = others.slice().sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
+  var prev = sorted[0];
+  var gapDays = (new Date(newActivity.date) - new Date(prev.date)) / 86400000;
+  if (gapDays > 7) {
+    return 'Dobry powrót! Staraj się trenować regularniej.';
+  }
+  var newDist = parseFloat(newActivity.distance) || 0;
+  var prevDist = parseFloat(prev.distance) || 0;
+  if (newDist > 0 && newDist > prevDist) {
+    return 'Świetna robota! Dystans rośnie.';
+  }
+  return 'Regularność jest ważniejsza niż jednorazowo długi trening.';
+}
+
+function showCardioTip(newActivity) {
+  var tip = getCardioTipMessage(newActivity);
   setTimeout(function() { showNotif('💡', 'Wskazówka', tip); }, 1500);
 }
 
@@ -305,13 +364,15 @@ function editCardioFromDetail() {
   openSheet('cardio-add-sheet');
 }
 
-function deleteCardioActivity() {
-  if (!_cardioEditId) return;
+function deleteCardioActivity(id) {
+  var targetId = id || _cardioEditId;
+  if (!targetId) return;
   if (!confirm('Usunąć tę aktywność?')) return;
-  state.cardioActivities = (state.cardioActivities || []).filter(function(a) { return a.id !== _cardioEditId; });
+  state.cardioActivities = (state.cardioActivities || []).filter(function(a) { return a.id !== targetId; });
   dbPut('cardio', { id: 'all', data: state.cardioActivities });
-  _cardioEditId = null;
-  closeAllSheets();
+  if (targetId === _cardioEditId) _cardioEditId = null;
+  var detailSheet = document.getElementById('cardio-detail-sheet');
+  if (detailSheet && detailSheet.classList.contains('open')) closeSheet('cardio-detail-sheet');
   renderCardioTab();
   if (typeof renderDashboardCards === 'function') renderDashboardCards();
   showNotif('🗑', 'Aktywność usunięta', '');

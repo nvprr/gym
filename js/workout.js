@@ -520,21 +520,70 @@ function openExercisePickerForWorkout(){
   openSheet('exercise-picker-sheet');
 }
 
+var _historyExpandedMonths = null;
+
+function _historyMonthPlural(n) {
+  if (n === 1) return 'trening';
+  var mod10 = n % 10, mod100 = n % 100;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'treningi';
+  return 'treningów';
+}
+
+function toggleHistoryMonth(key) {
+  if (!_historyExpandedMonths) _historyExpandedMonths = {};
+  _historyExpandedMonths[key] = !_historyExpandedMonths[key];
+  renderHistory();
+}
+
 function renderHistory(){
   const el=document.getElementById('history-list');
   if(!state.workouts.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Brak treningów</div><div class="empty-sub">Zacznij swój pierwszy trening!</div></div>';return}
   const months=['sty','lut','mar','kwi','maj','cze','lip','sie','wrz','paź','lis','gru'];
-  el.innerHTML=[...state.workouts].reverse().map(function(w){
+  const monthNamesFull=['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+
+  const sorted=[...state.workouts].reverse();
+  const groups={}; const order=[];
+  sorted.forEach(function(w){
     const d=new Date(w.date);
-    var ratingHtml=w.rating?'<div style="font-size:14px;font-weight:700;color:var(--yellow)">'+w.rating+'/10</div>':'';
-    return '<div class="history-item" style="display:flex;align-items:center;gap:8px;">'
-      +'<div style="display:flex;align-items:center;flex:1;cursor:pointer;min-width:0;" onclick="showWorkoutDetail(\''+w.id+'\')">'
-      +'<div class="history-date-badge"><div class="history-date-day">'+d.getDate()+'</div><div class="history-date-month">'+months[d.getMonth()]+'</div></div>'
-      +'<div style="flex:1;min-width:0;"><div style="font-weight:700;">'+(w.planName||'Trening')+'</div><div style="font-size:12px;color:var(--text3);">'+(w.dayName||'')+'</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">'+(w.exercises?.length||0)+' ćwiczeń · '+formatTime(w.duration||0)+' · '+(w.tonnage||0).toFixed(0)+'kg</div></div>'
-      +'<div style="text-align:right;margin-right:6px;">'+ratingHtml+'<div style="color:var(--text4);font-size:18px;">›</div></div>'
-      +'</div>'
-      +'<button onclick="event.stopPropagation();deleteWorkout(\''+w.id+'\')" style="flex-shrink:0;background:rgba(255,69,58,.12);border:none;color:var(--red);font-size:14px;padding:7px 10px;border-radius:10px;cursor:pointer;">🗑</button>'
-      +'</div>';
+    const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    if(!groups[key]){groups[key]=[]; order.push(key);}
+    groups[key].push(w);
+  });
+
+  const now=new Date();
+  const currentKey=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  if(!_historyExpandedMonths){
+    _historyExpandedMonths={};
+    _historyExpandedMonths[currentKey]=true;
+  }
+
+  el.innerHTML=order.map(function(key){
+    const parts=key.split('-'); const y=+parts[0], m=+parts[1]-1;
+    const label=monthNamesFull[m]+' '+y;
+    const items=groups[key];
+    const expanded=!!_historyExpandedMonths[key];
+    const itemsHtml=items.map(function(w){
+      const d=new Date(w.date);
+      var ratingHtml=w.rating?'<div style="font-size:14px;font-weight:700;color:var(--yellow)">'+w.rating+'/10</div>':'';
+      return '<div class="history-item" style="display:flex;align-items:center;gap:8px;">'
+        +'<div style="display:flex;align-items:center;flex:1;cursor:pointer;min-width:0;" onclick="showWorkoutDetail(\''+w.id+'\')">'
+        +'<div class="history-date-badge"><div class="history-date-day">'+d.getDate()+'</div><div class="history-date-month">'+months[d.getMonth()]+'</div></div>'
+        +'<div style="flex:1;min-width:0;"><div style="font-weight:700;">'+(w.planName||'Trening')+'</div><div style="font-size:12px;color:var(--text3);">'+(w.dayName||'')+'</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">'+(w.exercises?.length||0)+' ćwiczeń · '+formatTime(w.duration||0)+' · '+(w.tonnage||0).toFixed(0)+'kg</div></div>'
+        +'<div style="text-align:right;margin-right:6px;">'+ratingHtml+'<div style="color:var(--text4);font-size:18px;">›</div></div>'
+        +'</div>'
+        +'<button onclick="event.stopPropagation();deleteWorkout(\''+w.id+'\')" style="flex-shrink:0;background:rgba(255,69,58,.12);border:none;color:var(--red);font-size:14px;padding:7px 10px;border-radius:10px;cursor:pointer;">🗑</button>'
+        +'</div>';
+    }).join('');
+    return '<div class="history-month-group" style="margin-bottom:6px;">'
+      + '<div onclick="toggleHistoryMonth(\''+key+'\')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 4px;cursor:pointer;">'
+      +   '<div style="font-size:14px;font-weight:700;">'+label+'</div>'
+      +   '<div style="display:flex;align-items:center;gap:8px;color:var(--text3);font-size:12px;">'
+      +     '<span>'+items.length+' '+_historyMonthPlural(items.length)+'</span>'
+      +     '<span style="display:inline-block;transition:transform .2s;transform:rotate('+(expanded?90:0)+'deg);">›</span>'
+      +   '</div>'
+      + '</div>'
+      + '<div style="display:'+(expanded?'block':'none')+';">'+itemsHtml+'</div>'
+      + '</div>';
   }).join('');
 }
 

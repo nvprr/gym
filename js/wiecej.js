@@ -503,6 +503,17 @@ function renderWiecejDane(el) {
 // ── CHANGELOG ──
 var CHANGELOG = [
   {
+    version: '2.1.7',
+    date: '2025-07-21',
+    changes: [
+      '🗑 Cardio — usuwanie aktywności',
+      '🔧 Cardio — poprawiony formularz',
+      '📊 Cardio — wykres kropkowany',
+      '💡 Cardio — podpowiedzi po zapisaniu',
+      '📅 Historia treningów — grupowanie po miesiącach',
+    ]
+  },
+  {
     version: '2.1.4',
     date: '2025-07-17',
     changes: [
