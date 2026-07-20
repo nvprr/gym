@@ -10,6 +10,7 @@ var CACHE_FILES = [
   '/gym/js/db.js',
   '/gym/js/utils.js',
   '/gym/js/storage.js',
+  '/gym/js/cardio.js',
   '/gym/js/data.js',
   '/gym/js/svg_icons.js',
   '/gym/js/exercises.js',
