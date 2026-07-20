@@ -212,8 +212,31 @@ function renderDashboardCardContent(key,editMode){
         +   '<span style="font-weight:700;color:' + barColor + ';">' + gp.pct + '%</span>'
         + '</div>';
     }
+    case 'cardio': {
+      var cActs = state.cardioActivities || [];
+      var cSince = Date.now() - 7*86400000;
+      var cWeek = cActs.filter(function(a){ return new Date(a.date).getTime() > cSince; });
+      var cTime = cWeek.reduce(function(s,a){ return s+(parseFloat(a.duration)||0); }, 0);
+      var cDist = cWeek.reduce(function(s,a){ return s+(parseFloat(a.distance)||0); }, 0);
+      var cTimeLabel = typeof _fmtCardioDuration === 'function' ? _fmtCardioDuration(cTime) : Math.round(cTime)+' min';
+      return '<div class="card-title">❤️ Cardio</div>'
+        + '<div class="dashboard-card-grid">'
+        +   '<div class="stat-card"><div class="stat-val accent">' + cWeek.length + '</div><div class="stat-label">Aktywności</div></div>'
+        +   '<div class="stat-card"><div class="stat-val">' + cTimeLabel + '</div><div class="stat-label">Czas</div></div>'
+        +   '<div class="stat-card"><div class="stat-val green">' + cDist.toFixed(1) + ' km</div><div class="stat-label">Dystans</div></div>'
+        + '</div>'
+        + '<div style="display:flex;gap:8px;margin-top:10px;">'
+        +   '<button class="btn btn-secondary" style="flex:1;" onclick="event.stopPropagation();openCardioAddSheet()">➕ Dodaj</button>'
+        +   '<button class="btn btn-secondary" style="flex:1;" onclick="event.stopPropagation();openCardioHistorySheet()">📜 Historia</button>'
+        + '</div>';
+    }
     default: return `<div class="card-title">${key}</div><div class="dashboard-card-note">Brak danych.</div>`;
   }
+}
+
+function openCardioHistorySheet(){
+  openSheet('cardio-history-sheet');
+  if(typeof renderCardioTab==='function') renderCardioTab();
 }
 
 function renderDashboardCards(){
