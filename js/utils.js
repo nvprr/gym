@@ -53,3 +53,54 @@ function getPrevBest(exId){
   return null;
 }
 
+// ── Streak treningowy (tygodniowy) ──
+// Streak liczy kolejne tygodnie kalendarzowe (poniedziałek–niedziela), w których
+// był co najmniej 1 trening — nie kolejne dni. Dzięki temu przerwa w obrębie
+// tygodnia (np. trening w piątek, potem w poniedziałek następnego tygodnia)
+// NIE zeruje streaka, bo to wciąż 2 kolejne tygodnie z treningiem.
+// Streak zeruje się dopiero, gdy minie CAŁY tydzień kalendarzowy bez treningu.
+function getWeekMonday(d) {
+  var date = new Date(d);
+  date.setHours(0, 0, 0, 0);
+  var day = date.getDay(); // 0=Niedz,1=Pon,...,6=Sob
+  var diff = (day === 0 ? -6 : 1) - day;
+  date.setDate(date.getDate() + diff);
+  return date;
+}
+
+function computeStreaks() {
+  var workouts = state.workouts;
+  if (!workouts || !workouts.length) return { current: 0, max: 0 };
+
+  var WEEK_MS = 7 * 86400000;
+  var weekSet = {};
+  workouts.forEach(function(w) {
+    weekSet[getWeekMonday(w.date).getTime()] = true;
+  });
+  var weekTimes = Object.keys(weekSet).map(Number).sort(function(a, b) { return a - b; });
+
+  // Najdłuższy streak w historii (kolejne tygodnie treningowe)
+  var max = 1, run = 1;
+  for (var i = 1; i < weekTimes.length; i++) {
+    var diffWeeks = Math.round((weekTimes[i] - weekTimes[i - 1]) / WEEK_MS);
+    if (diffWeeks === 1) { run++; max = Math.max(max, run); }
+    else run = 1;
+  }
+
+  // Aktualny streak — zeruje się tylko gdy minął cały tydzień bez treningu
+  var thisMonday = getWeekMonday(new Date()).getTime();
+  var lastTrainedWeek = weekTimes[weekTimes.length - 1];
+  var weeksSinceLastTrained = Math.round((thisMonday - lastTrainedWeek) / WEEK_MS);
+  if (weeksSinceLastTrained > 1) {
+    return { current: 0, max: max };
+  }
+
+  var current = 1;
+  for (var j = weekTimes.length - 2; j >= 0; j--) {
+    var d = Math.round((weekTimes[j + 1] - weekTimes[j]) / WEEK_MS);
+    if (d === 1) current++;
+    else break;
+  }
+  return { current: current, max: Math.max(max, current) };
+}
+
