@@ -5,6 +5,16 @@ function loadSettings(){
   if(s)state.settings={...state.settings,...s};
   if(!Array.isArray(state.settings.dashboardOrder) || !state.settings.dashboardOrder.length){
     state.settings.dashboardOrder=DEFAULT_DASHBOARD_ORDER.slice();
+  } else {
+    // BUGFIX: gdy w aktualizacji dojdzie nowa karta (np. "cardio"), zapisana
+    // wcześniej kolejność użytkownika jej nie zawiera i karta nigdy się nie
+    // pojawia (dashboardOrder.length>0, więc powyższy fallback nie działa).
+    // Dopisujemy brakujące klucze z DEFAULT_DASHBOARD_ORDER na koniec.
+    DEFAULT_DASHBOARD_ORDER.forEach(function(key){
+      if(state.settings.dashboardOrder.indexOf(key)===-1){
+        state.settings.dashboardOrder.push(key);
+      }
+    });
   }
   if(!Array.isArray(state.settings.dashboardHidden)){
     state.settings.dashboardHidden=[];

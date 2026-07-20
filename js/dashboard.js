@@ -220,7 +220,7 @@ function renderDashboardCardContent(key,editMode){
       var cDist = cWeek.reduce(function(s,a){ return s+(parseFloat(a.distance)||0); }, 0);
       var cTimeLabel = typeof _fmtCardioDuration === 'function' ? _fmtCardioDuration(cTime) : Math.round(cTime)+' min';
       return '<div class="card-title">❤️ Cardio</div>'
-        + '<div class="dashboard-card-grid">'
+        + '<div class="dashboard-card-grid" style="grid-template-columns:1fr 1fr 1fr;">'
         +   '<div class="stat-card"><div class="stat-val accent">' + cWeek.length + '</div><div class="stat-label">Aktywności</div></div>'
         +   '<div class="stat-card"><div class="stat-val">' + cTimeLabel + '</div><div class="stat-label">Czas</div></div>'
         +   '<div class="stat-card"><div class="stat-val green">' + cDist.toFixed(1) + ' km</div><div class="stat-label">Dystans</div></div>'
