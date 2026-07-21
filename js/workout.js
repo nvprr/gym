@@ -3,15 +3,16 @@
 // ── Zmienne globalne ──
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
 let notifTimer;
-let workoutState = {planName:'',dayName:'',startTime:null,stopwatchInterval:null,exercises:[],totalSets:0,totalReps:0,totalTonnage:0,totalRestTime:0,activeRestCount:0};
+let workoutState = {planName:'',dayName:'',startTime:null,stopwatchInterval:null,mode:'standard',exercises:[],totalSets:0,totalReps:0,totalTonnage:0,totalRestTime:0,activeRestCount:0};
 let timerState = {remaining:0,total:0,interval:null,paused:false,reminderTimeout:null};
 let exFilter = {group:'all',sub:'all',cat:'all',search:''};
 
 
-function beginWorkout(planId,dayIdx,day,planName){
+function beginWorkout(planId,dayIdx,day,planName,mode){
   const prev=state.workouts.length?state.workouts[state.workouts.length-1]:null;
   workoutState={
     planId,dayIdx,planName,dayName:day.name,startTime:Date.now(),stopwatchInterval:null,
+    mode:mode||'standard',
     exercises:day.exercises.map(ex=>{
       const prevEx=prev?.exercises?.find(e=>e.id===ex.id);
       const prevBest=getPrevBest(ex.id);
@@ -27,8 +28,13 @@ function beginWorkout(planId,dayIdx,day,planName){
   };
   var twPlan = document.getElementById('tw-plan-name');
   var twExTotal = document.getElementById('tw-ex-total');
+  var twModeBadge = document.getElementById('tw-mode-badge');
   if(twPlan) twPlan.textContent = day.name;
   if(twExTotal) twExTotal.textContent = workoutState.exercises.length;
+  if(twModeBadge){
+    var modeInfo=WORKOUT_MODES[workoutState.mode]||WORKOUT_MODES.standard;
+    twModeBadge.textContent = workoutState.mode==='standard' ? '' : (modeInfo.icon+' Tryb: '+modeInfo.label);
+  }
   renderTrainingView();
   document.getElementById('training-view').classList.add('open');
   workoutState.stopwatchInterval=setInterval(updateStopwatch,1000);
@@ -94,8 +100,9 @@ function renderTrainingView(){
     var completedSets=ex.sets.filter(function(s){return s.done;}).length;
     var completedTonnage=ex.sets.filter(function(s){return s.done;}).reduce(function(a,s){return a+(parseFloat(s.weight)||0)*(parseInt(s.reps)||0);},0);
     var currentTonnage=ex.sets.reduce(function(a,s){return a+(parseFloat(s.weight)||0)*(parseInt(s.reps)||0);},0);
-    var prevBest=getPrevBest(ex.id);
-    var suggestion=prevBest&&parseFloat(prevBest.weight)>0?'💡 Poprzednio: '+prevBest.weight+'kg×'+prevBest.reps+' — spróbuj '+(parseFloat(prevBest.weight)+2.5).toFixed(1)+'kg':'';
+    var lastPerf=getLastExercisePerformance(ex.id);
+    var record=workoutState.mode==='pr'?getExerciseRecord(ex.id):null;
+    var modeSuggestion=getModeSuggestion(workoutState.mode,lastPerf,record);
     var allDone=completedSets===ex.sets.length&&ex.sets.length>0;
     html+='<div class="exercise-card" id="ex-card-'+ei+'">';
     html+='<div class="exercise-header">';
@@ -106,7 +113,9 @@ function renderTrainingView(){
     html+='<button onclick="openExerciseDetail(\''+ex.id+'\')" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:4px 6px;">ℹ️</button>';
     html+='<button onclick="removeExFromWorkout('+ei+')" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:4px 6px;">🗑</button>';
     html+='</div>';
-    if(suggestion) html+='<div style="padding:0 16px 8px;font-size:12px;color:var(--accent)">'+suggestion+'</div>';
+    if(lastPerf) html+='<div style="padding:0 16px 6px;font-size:12px;color:var(--text3);">📊 Ostatni trening: <strong style="color:var(--text2);">'+lastPerf.weight+'kg × '+lastPerf.reps+'</strong> · '+lastPerf.dateLabel+'</div>';
+    if(modeSuggestion) html+='<div style="margin:0 16px 8px;background:var(--surface2);border-radius:10px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;"><div style="font-size:12px;color:var(--accent);">💡 '+modeSuggestion.text+'</div><button onclick="applyModeSuggestion('+ei+','+modeSuggestion.weight+')" style="flex-shrink:0;background:var(--accent);color:#1c1c1c;border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;">Użyj sugestii</button></div>';
+    if(workoutState.mode==='deload'&&lastPerf) html+='<div style="padding:0 16px 8px;font-size:11px;color:var(--text3);">Deload pomaga zregenerować organizm i przygotować do dalszego progresu.</div>';
     if(ex.note) html+='<div style="padding:0 16px 8px;font-size:12px;color:var(--text3);">📝 '+ex.note+'</div>';
     html+='<table class="sets-table">';
     html+='<thead><tr><th style="width:28px;">S</th><th>Poprz.</th><th>kg</th><th>Powt.</th><th style="width:52px;">Typ</th><th style="width:44px;text-align:center;">Stan</th><th style="width:28px;"></th></tr></thead>';
@@ -135,6 +144,81 @@ function renderTrainingView(){
   });
   html+='<div style="padding:8px 16px 16px;"><button class="btn btn-secondary" style="width:100%;" onclick="openExercisePickerForWorkout()">+ Dodaj ćwiczenie</button></div>';
   body.innerHTML=html;
+}
+
+// Ostatnie wykonanie ćwiczenia — najlepsza (najcięższa) ukończona seria z
+// najnowszego treningu, w którym to ćwiczenie wystąpiło, wraz z datą.
+// Działa wyłącznie w oparciu o historię — nigdy jej nie modyfikuje.
+function getLastExercisePerformance(exId){
+  for(var i=state.workouts.length-1;i>=0;i--){
+    var w=state.workouts[i];
+    var ex=(w.exercises||[]).find(function(e){return e.id===exId;});
+    if(ex){
+      var best=(ex.sets||[]).filter(function(s){return s.done;}).sort(function(a,b){return (parseFloat(b.weight)||0)-(parseFloat(a.weight)||0);})[0];
+      if(best){
+        return {
+          weight: parseFloat(best.weight)||0,
+          reps: best.reps,
+          date: w.date,
+          dateLabel: new Date(w.date).toLocaleDateString('pl',{day:'numeric',month:'short'})
+        };
+      }
+    }
+  }
+  return null;
+}
+
+// Rekord all-time (najcięższa ukończona seria w całej historii) — używany
+// przez tryb "Próba rekordu (PR)". Nigdy niczego nie modyfikuje.
+function getExerciseRecord(exId){
+  var best=null;
+  state.workouts.forEach(function(w){
+    var ex=(w.exercises||[]).find(function(e){return e.id===exId;});
+    if(!ex) return;
+    (ex.sets||[]).forEach(function(s){
+      if(!s.done) return;
+      var wt=parseFloat(s.weight)||0;
+      if(wt>0 && (!best||wt>best.weight)){
+        best={weight:wt, reps:s.reps, date:w.date, dateLabel:new Date(w.date).toLocaleDateString('pl',{day:'numeric',month:'short',year:'numeric'})};
+      }
+    });
+  });
+  return best;
+}
+
+// Sugestia GymFlow zależna od trybu treningu. Zwraca null gdy tryb to
+// 'standard' lub gdy brak historii tego ćwiczenia (wtedy nic nie sugerujemy).
+function getModeSuggestion(mode, lastPerf, record){
+  var roundHalf=function(n){return Math.round(n*2)/2;};
+  if(mode==='deload'){
+    if(!lastPerf||!lastPerf.weight) return null;
+    var w=roundHalf(lastPerf.weight*0.775);
+    return { weight:w, text:'Deload: spróbuj ok. '+w+'kg (75-80% ostatniego ciężaru)' };
+  }
+  if(mode==='pr'){
+    if(!record||!record.weight) return null;
+    var w=roundHalf(record.weight+2.5);
+    return { weight:w, text:'Rekord: '+record.weight+'kg ('+record.dateLabel+') — spróbuj '+w+'kg' };
+  }
+  if(mode==='light'){
+    if(!lastPerf||!lastPerf.weight) return null;
+    var w=roundHalf(lastPerf.weight*0.8);
+    return { weight:w, text:'Lekki trening: spróbuj '+w+'kg lub wykonaj mniej serii' };
+  }
+  return null;
+}
+
+// Wpisuje proponowany ciężar w pierwszą nieukończoną serię danego ćwiczenia.
+// Użytkownik zawsze może to później zmienić ręcznie.
+function applyModeSuggestion(ei, weightVal){
+  var ex=workoutState.exercises[ei];
+  if(!ex||!ex.sets.length) return;
+  var targetIdx=ex.sets.findIndex(function(s){return !s.done;});
+  if(targetIdx===-1) targetIdx=0;
+  var input=document.getElementById('w-'+ei+'-'+targetIdx);
+  if(input) input.value=weightVal;
+  liveUpdateSet(ei,targetIdx,'weight',weightVal);
+  showNotif('💡','Sugestia zastosowana',weightVal+'kg → seria '+(targetIdx+1));
 }
 
 function completeSet(ei,si){
@@ -494,16 +578,46 @@ function startWorkoutPrompt(){
   openSheet('start-workout-sheet');
 }
 
-function startFreeWorkout(){
-  closeAllSheets();
-  beginWorkout(null,null,{name:'Trening własny',exercises:[],restTime:90},'Trening własny');
-}
+// ── Tryb treningu (Standardowy / Deload / PR / Lekki) ──
+// Tryb wpływa wyłącznie na sugestie wyświetlane przy ćwiczeniach — nigdy nie
+// nadpisuje historii, planów ani domyślnie wypełnionych pól ciężaru/powtórzeń.
+var _pendingWorkoutStart = null;
+var WORKOUT_MODES = {
+  standard: { icon:'💪', label:'Standardowy' },
+  deload:   { icon:'😌', label:'Deload' },
+  pr:       { icon:'🔥', label:'Próba rekordu (PR)' },
+  light:    { icon:'⚡', label:'Lekki / regeneracyjny' },
+};
 
 function startWorkout(pi){
   closeAllSheets();
-  const plan=state.plans[pi];
-  const dayObj={name:plan.name,exercises:plan.exercises||[],restTime:90};
-  beginWorkout(plan.id,null,dayObj,plan.name);
+  _pendingWorkoutStart={type:'plan',pi:pi};
+  openSheet('workout-mode-sheet');
+}
+
+function startFreeWorkout(){
+  closeAllSheets();
+  _pendingWorkoutStart={type:'free'};
+  openSheet('workout-mode-sheet');
+}
+
+function cancelWorkoutModeSheet(){
+  _pendingWorkoutStart=null;
+  closeAllSheets();
+}
+
+function chooseWorkoutMode(mode){
+  var pending=_pendingWorkoutStart;
+  _pendingWorkoutStart=null;
+  closeAllSheets();
+  if(!pending) return;
+  if(pending.type==='plan'){
+    var plan=state.plans[pending.pi];
+    var dayObj={name:plan.name,exercises:plan.exercises||[],restTime:90};
+    beginWorkout(plan.id,null,dayObj,plan.name,mode);
+  } else {
+    beginWorkout(null,null,{name:'Trening własny',exercises:[],restTime:90},'Trening własny',mode);
+  }
 }
 
 function switchWorkoutTab(t,el){
