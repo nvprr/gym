@@ -2,7 +2,6 @@
 
 // ── Zmienne globalne ──
 let dashboardDragKey = null;
-let touchDragTargetKey = null;
 
 
 function refreshDashboard(){
@@ -62,10 +61,10 @@ function restoreDashboardDefaults(){
   showNotif('✅','Przywrócono domyślne','');
 }
 
-function renderDashboardCard(key,editMode){
+function renderDashboardCard(key,editMode,idx){
   const hidden=getDashboardHidden().includes(key);
   const cardClass=`dashboard-card${hidden?' hidden':''}`;
-  const handle=editMode?`<div class="dashboard-card-handle" draggable="true" ondragstart="dragDashboardCardStart(event,'${key}')" onmousedown="event.preventDefault()" ontouchstart="touchDashboardCardStart(event,'${key}')" ontouchmove="touchDashboardCardMove(event)" ontouchend="touchDashboardCardEnd()" title="Przeciągnij">≡</div>`:'';
+  const handle=editMode?`<div class="dashboard-card-handle" draggable="true" ondragstart="dragDashboardCardStart(event,'${key}')" onmousedown="event.preventDefault()" ontouchstart="startDashboardCardDrag(event,${idx})" ontouchmove="moveExerciseDrag(event)" ontouchend="endExerciseDrag()" title="Przeciągnij">≡</div>`:'';
   const hideLabel=hidden?'👁':'✕';
   const hideTitle=hidden?'Pokaż kartę':'Ukryj kartę';
   const hideBtn=editMode?`<button class="dashboard-card-hide" title="${hideTitle}" onclick="event.stopPropagation();toggleDashboardCardHidden('${key}')">${hideLabel}</button>`:'';
@@ -245,9 +244,9 @@ function renderDashboardCards(){
   const editMode=!!state.dashboardEditMode;
   const order=getDashboardOrder();
   const hidden=getDashboardHidden();
-  container.innerHTML=order.map(key=>{
+  container.innerHTML=order.map((key,idx)=>{
     if(hidden.includes(key) && !editMode) return '';
-    return renderDashboardCard(key,editMode);
+    return renderDashboardCard(key,editMode,idx);
   }).join('');
   const bannerText=document.getElementById('dashboard-edit-banner-text');
   if(bannerText){
@@ -322,44 +321,18 @@ function dragDashboardCardDrop(event,targetKey){
   renderDashboardCards();
 }
 
-function dragDashboardCardDropTouch(targetKey){
+// Cienki wrapper na wspólny silnik drag&drop z js/plans.js (startExerciseDrag/
+// moveExerciseDrag/endExerciseDrag) — ta sama płynność co przy zmianie kolejności
+// ćwiczeń: żywe przesuwanie sąsiadów, auto-scroll przy krawędziach, animacja upuszczenia.
+// Ścieżka myszy (dragDashboardCardStart/Over/Drop, HTML5 DnD) zostaje bez zmian.
+function startDashboardCardDrag(event, idx){
   const order=getDashboardOrder();
-  const from=order.indexOf(dashboardDragKey);
-  const to=order.indexOf(targetKey);
-  if(from<0||to<0||from===to) return;
-  order.splice(from,1);
-  order.splice(to,0,dashboardDragKey);
-  state.settings.dashboardOrder=order;
-  saveDashboardLayout();
-  renderDashboardCards();
-}
-
-function touchDashboardCardStart(event,key){
-  if(!event.touches || !event.touches.length) return;
-  dashboardDragKey=key;
-  touchDragTargetKey=key;
-  event.preventDefault();
-}
-
-function touchDashboardCardMove(event){
-  if(!dashboardDragKey || !event.touches || !event.touches.length) return;
-  const touch=event.touches[0];
-  const el=document.elementFromPoint(touch.clientX,touch.clientY);
-  if(!el) return;
-  const card=el.closest('.dashboard-card');
-  if(card && card.id.startsWith('dash-card-')){
-    touchDragTargetKey=card.id.replace('dash-card-','');
-  }
-}
-
-function touchDashboardCardEnd(){
-  if(!dashboardDragKey) return;
-  const targetKey=touchDragTargetKey||dashboardDragKey;
-  if(targetKey && targetKey!==dashboardDragKey){
-    dragDashboardCardDropTouch(targetKey);
-  }
-  dashboardDragKey=null;
-  touchDragTargetKey=null;
+  startExerciseDrag(event,'dashboard-cards',idx,order,function(inProgress,settledIdx){
+    state.settings.dashboardOrder=order;
+    saveDashboardLayout();
+    renderDashboardCards();
+    if(!inProgress) _exDragFlash('dashboard-cards','.dashboard-card',settledIdx);
+  },'.dashboard-card');
 }
 
 // ── WIDGET "AKTUALNY CEL" ──
