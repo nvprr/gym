@@ -96,6 +96,7 @@ function renderTrainingView(){
   if(!body) return;
   var SET_TYPES=[{v:'working',l:'Robocza'},{v:'warmup',l:'Rozgrzewkowa'},{v:'dropset',l:'Dropset'},{v:'restpause',l:'Rest-Pause'},{v:'failure',l:'Do upadku'}];
   var html='';
+  var totalEx=workoutState.exercises.length;
   workoutState.exercises.forEach(function(ex,ei){
     var completedSets=ex.sets.filter(function(s){return s.done;}).length;
     var completedTonnage=ex.sets.filter(function(s){return s.done;}).reduce(function(a,s){return a+(parseFloat(s.weight)||0)*(parseInt(s.reps)||0);},0);
@@ -104,12 +105,17 @@ function renderTrainingView(){
     var record=workoutState.mode==='pr'?getExerciseRecord(ex.id):null;
     var modeSuggestion=getModeSuggestion(workoutState.mode,lastPerf,record);
     var allDone=completedSets===ex.sets.length&&ex.sets.length>0;
-    html+='<div class="exercise-card" id="ex-card-'+ei+'">';
+    html+='<div class="exercise-card exercise-row-draggable" id="ex-card-'+ei+'">';
     html+='<div class="exercise-header">';
-    html+='<div class="exercise-icon-circle">💪</div>';
+    html+='<div class="exercise-drag-handle" ontouchstart="startExerciseDrag(event,\'training-body\','+ei+',workoutState.exercises,onWorkoutExerciseReorder,\'.exercise-card\')" ontouchmove="moveExerciseDrag(event)" ontouchend="endExerciseDrag()" title="Przeciągnij">≡</div>';
+    html+='<div class="exercise-reorder-num">'+(ei+1)+'</div>';
     html+='<div style="flex:1;"><div class="exercise-name">'+ex.name+'</div>';
     html+='<div class="exercise-meta">'+(ex.reps||'—')+' powt. · '+(ex.restTime==='default'?'domyślna':ex.restTime+'s')+'</div></div>';
     if(allDone) html+='<span style="font-size:22px;margin-left:4px;">✅</span>';
+    html+='<div class="exercise-reorder-arrows">';
+    html+='<button class="exercise-reorder-arrow" onclick="moveWorkoutExercise('+ei+',-1)" '+(ei===0?'disabled':'')+' title="Przesuń wyżej">⬆</button>';
+    html+='<button class="exercise-reorder-arrow" onclick="moveWorkoutExercise('+ei+',1)" '+(ei===totalEx-1?'disabled':'')+' title="Przesuń niżej">⬇</button>';
+    html+='</div>';
     html+='<button onclick="openExerciseDetail(\''+ex.id+'\')" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:4px 6px;">ℹ️</button>';
     html+='<button onclick="removeExFromWorkout('+ei+')" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:4px 6px;">🗑</button>';
     html+='</div>';
@@ -219,6 +225,24 @@ function applyModeSuggestion(ei, weightVal){
   if(input) input.value=weightVal;
   liveUpdateSet(ei,targetIdx,'weight',weightVal);
   showNotif('💡','Sugestia zastosowana',weightVal+'kg → seria '+(targetIdx+1));
+}
+
+// Callback wywoływany przez współdzielony silnik drag&drop (js/plans.js:
+// startExerciseDrag/moveExerciseDrag/endExerciseDrag) — kolejność w workoutState.exercises
+// jest już zaktualizowana, tu tylko re-render (numeracja liczy się z indeksu tablicy).
+function onWorkoutExerciseReorder(inProgress, idx){
+  renderTrainingView();
+  if(!inProgress) _exDragFlash('training-body','.exercise-card',idx);
+}
+
+// Rozwiązanie awaryjne (pkt 7 wymagań) — proste przyciski, gdy drag&drop jest niedostępny/niestabilny.
+function moveWorkoutExercise(ei, dir){
+  const list=workoutState.exercises;
+  const target=ei+dir;
+  if(target<0||target>=list.length) return;
+  const tmp=list[ei]; list[ei]=list[target]; list[target]=tmp;
+  renderTrainingView();
+  _exDragFlash('training-body','.exercise-card',target);
 }
 
 function completeSet(ei,si){
