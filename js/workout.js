@@ -812,6 +812,218 @@ function calcStreak(){
   return{streak,maxStreak};
 }
 
+// ── Porównywanie treningów: wydzielona logika wyszukiwania (reużywalna też np. w Statystykach) ──
+// "Wariant" treningu = konkretny plan + konkretny dzień w tym planie (np. "FBW" + "FBW - A").
+// Samo planId nie wystarcza, bo jeden plan może mieć wiele dni (FBW - A, FBW - B) —
+// to właśnie ta precyzja naprawia problem mylenia FBW A z FBW B.
+function getWorkoutVariantLabel(w){
+  return (w.planName||'Trening')+(w.dayName?' — '+w.dayName:'');
+}
+
+function getWorkoutVariantKey(w){
+  return (w.planId||w.planName||'free')+'::'+(w.dayName||'');
+}
+
+// Treningi tego samego wariantu, wykonane wcześniej niż `w`, od najnowszego.
+function findWorkoutsBySameVariant(w){
+  var key=getWorkoutVariantKey(w);
+  var refDate=new Date(w.date);
+  return state.workouts.filter(function(pw){
+    return pw.id!==w.id && getWorkoutVariantKey(pw)===key && new Date(pw.date)<refDate;
+  }).sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+}
+
+function findLastWorkoutBySameVariant(w){
+  var list=findWorkoutsBySameVariant(w);
+  return list.length?list[0]:null;
+}
+
+// Wszystkie treningi możliwe do porównania (dowolny plan/wariant), wcześniejsze niż `w`.
+function findComparableWorkouts(w){
+  var refDate=new Date(w.date);
+  return state.workouts.filter(function(pw){
+    return pw.id!==w.id && new Date(pw.date)<refDate;
+  }).sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+}
+
+// Karta z różnicami (tonaż/serie/powtórzenia/czas) — logika obliczeń 1:1 jak wcześniej,
+// tylko wydzielona do funkcji, żeby dało się ją odświeżać po zmianie wybranego treningu.
+function buildCompareDiffCard(w, prev, totalTonnage, totalSets, totalReps){
+  var months=['sty','lut','mar','kwi','maj','cze','lip','sie','wrz','paź','lis','gru'];
+  var prevDate=new Date(prev.date);
+  var prevTonnage=prev.tonnage||0;
+  var prevSets   =prev.totalSets||0;
+  var prevReps   =prev.totalReps||0;
+  var prevDur    =prev.duration||0;
+
+  var diffs=[
+    { icon:'⚖️', label:'Tonaż',        diff: totalTonnage-prevTonnage, unit:'kg', fmt:function(v){return v.toFixed(1);} },
+    { icon:'🔢', label:'Serie',         diff: totalSets-prevSets,    unit:'',   fmt:function(v){return Math.round(v);} },
+    { icon:'🔁', label:'Powtórzenia',   diff: totalReps-prevReps,    unit:'',   fmt:function(v){return Math.round(v);} },
+    { icon:'⏱️', label:'Czas treningu', diff: (w.duration||0)-prevDur, unit:'', fmt:function(v){return formatTime(Math.abs(Math.round(v)));} },
+  ];
+
+  var html='<div class="card" style="margin-bottom:12px;padding:14px 16px;">';
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">';
+  html+='<div style="font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">📊 Vs '+getWorkoutVariantLabel(prev)+'</div>';
+  html+='<button onclick="openCompareWorkoutPicker(\''+w.id+'\')" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;padding:2px 4px;">Zmień</button>';
+  html+='</div>';
+  html+='<div style="font-size:11px;color:var(--text4);margin-bottom:10px;">'+prevDate.getDate()+' '+months[prevDate.getMonth()]+' '+prevDate.getFullYear()+'</div>';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
+  diffs.forEach(function(df){
+    if (df.diff === 0) return;
+    var isPos = df.label === 'Czas treningu' ? df.diff < 0 : df.diff > 0;
+    var sign  = df.diff > 0 ? '+' : '';
+    var col   = isPos ? 'var(--green)' : 'var(--red)';
+    var arrow = isPos ? '📈' : '📉';
+    var valStr = df.label === 'Czas treningu'
+      ? (df.diff>0?'+':'-')+df.fmt(df.diff)
+      : sign+df.fmt(df.diff)+(df.unit?' '+df.unit:'');
+    html += '<div style="background:var(--surface2);border-radius:10px;padding:10px 12px;">'
+      + '<div style="font-size:11px;color:var(--text3);margin-bottom:2px;">'+df.icon+' '+df.label+'</div>'
+      + '<div style="font-size:15px;font-weight:800;color:'+col+';">'+arrow+' '+valStr+'</div>'
+      + '</div>';
+  });
+  html+='</div></div>';
+  return html;
+}
+
+// Karta wyboru — pokazywana zamiast automatycznego porównania, dopóki użytkownik
+// sam nie wskaże treningu do zestawienia (pkt 1 wymagań: koniec auto-porównania).
+function buildCompareCtaCard(w){
+  var lastSameVariant=findLastWorkoutBySameVariant(w);
+  var html='<div class="card" style="margin-bottom:12px;padding:14px 16px;">';
+  html+='<div style="font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">📊 Porównanie treningów</div>';
+  if (lastSameVariant){
+    html+='<div style="font-size:12px;color:var(--text3);margin-bottom:10px;">Wybierz trening, z którym chcesz porównać ten wynik.</div>';
+    html+='<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="quickCompareWithSameVariant(\''+w.id+'\')">⚡ Porównaj z ostatnim treningiem tego planu</button>';
+  } else {
+    html+='<div style="font-size:12px;color:var(--text3);margin-bottom:10px;">To pierwszy trening tego planu — nie ma jeszcze czego porównać.</div>';
+  }
+  html+='<button class="btn btn-secondary" style="width:100%;" onclick="openCompareWorkoutPicker(\''+w.id+'\')">Wybierz inny trening do porównania</button>';
+  html+='</div>';
+  return html;
+}
+
+// ── Sheet wyboru treningu do porównania ──
+var _compareChoice = {};       // { [workoutId]: wybranyPoprzedniWorkoutId } — pamięć wyboru w bieżącej sesji
+var _comparePickerFor = null;  // id treningu, dla którego aktualnie wybieramy porównanie
+var _compareFilterKey = 'all';
+var _compareSearchQ = '';
+
+function openCompareWorkoutPicker(workoutId){
+  var w=state.workouts.find(function(x){ return x.id===workoutId; });
+  if (!w) return;
+  _comparePickerFor=workoutId;
+  _compareFilterKey='all';
+  _compareSearchQ='';
+  var searchEl=document.getElementById('compare-search');
+  if (searchEl) searchEl.value='';
+  _renderCompareChips(w);
+  renderCompareWorkoutList();
+  openSheet('workout-compare-picker-sheet');
+}
+
+function _renderCompareChips(w){
+  var container=document.getElementById('compare-plan-chips');
+  if (!container) return;
+  var seen={}; var variants=[];
+  findComparableWorkouts(w).forEach(function(pw){
+    var key=getWorkoutVariantKey(pw);
+    if (seen[key]) return;
+    seen[key]=true;
+    variants.push({ key:key, label:getWorkoutVariantLabel(pw) });
+  });
+  var html='<button class="ex-chip active" onclick="setCompareFilter(\'all\',this)">Wszystkie</button>';
+  variants.forEach(function(v){
+    html+='<button class="ex-chip" onclick="setCompareFilter(\''+v.key.replace(/'/g,"\\'")+'\',this)">'+v.label+'</button>';
+  });
+  container.innerHTML=html;
+}
+
+function setCompareFilter(key, el){
+  _compareFilterKey=key;
+  document.querySelectorAll('#compare-plan-chips .ex-chip').forEach(function(b){ b.classList.remove('active'); });
+  el.classList.add('active');
+  renderCompareWorkoutList();
+}
+
+function filterCompareWorkouts(q){
+  _compareSearchQ=q||'';
+  renderCompareWorkoutList();
+}
+
+function _compareListItemHtml(pw, overrideLabel){
+  var months=['sty','lut','mar','kwi','maj','cze','lip','sie','wrz','paź','lis','gru'];
+  var d=new Date(pw.date);
+  var dateStr=d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear();
+  var timeStr=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+  var exCount=(pw.exercises||[]).filter(function(ex){ return (ex.sets||[]).some(function(s){return s.done;}); }).length;
+  return '<div class="history-item" style="display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="selectCompareWorkout(\''+pw.id+'\')">'
+    + '<div class="history-date-badge"><div class="history-date-day">'+d.getDate()+'</div><div class="history-date-month">'+months[d.getMonth()]+'</div></div>'
+    + '<div style="flex:1;min-width:0;">'
+    +   '<div style="font-weight:700;">'+(overrideLabel?overrideLabel+' · ':'')+getWorkoutVariantLabel(pw)+'</div>'
+    +   '<div style="font-size:12px;color:var(--text3);margin-top:2px;">'+dateStr+' · '+timeStr+' · '+formatTime(pw.duration||0)+' · '+exCount+' ćwiczeń</div>'
+    + '</div>'
+    + '<div style="color:var(--text4);font-size:18px;">›</div>'
+    + '</div>';
+}
+
+function renderCompareWorkoutList(){
+  var w=state.workouts.find(function(x){ return x.id===_comparePickerFor; });
+  var listEl=document.getElementById('compare-workout-list');
+  if (!w || !listEl) return;
+
+  var all=findComparableWorkouts(w);
+  if (!all.length){
+    listEl.innerHTML='<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">Brak treningów do porównania</div><div class="empty-sub">To pierwszy zapisany trening.</div></div>';
+    return;
+  }
+
+  var filtered=all.filter(function(pw){
+    if (_compareFilterKey!=='all' && getWorkoutVariantKey(pw)!==_compareFilterKey) return false;
+    if (_compareSearchQ){
+      var q=_compareSearchQ.toLowerCase();
+      if (getWorkoutVariantLabel(pw).toLowerCase().indexOf(q)===-1) return false;
+    }
+    return true;
+  });
+
+  var html='';
+  // "Ostatni trening" = dawne domyślne zachowanie (pkt 3), zawsze dostępne na górze
+  // dopóki nie zawężono widoku filtrem/szukajką.
+  if (_compareFilterKey==='all' && !_compareSearchQ){
+    html+='<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:4px 0 8px;">Szybki wybór</div>';
+    html+=_compareListItemHtml(all[0], 'Ostatni trening');
+    html+='<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;">Cała historia</div>';
+  }
+
+  if (!filtered.length){
+    html+='<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">Brak wyników</div><div class="empty-sub">Spróbuj innej frazy lub filtru.</div></div>';
+  } else {
+    filtered.forEach(function(pw){ html+=_compareListItemHtml(pw, null); });
+  }
+  listEl.innerHTML=html;
+}
+
+function selectCompareWorkout(chosenId){
+  if (!_comparePickerFor) return;
+  _compareChoice[_comparePickerFor]=chosenId;
+  var targetId=_comparePickerFor;
+  _comparePickerFor=null;
+  closeSheet('workout-compare-picker-sheet');
+  showWorkoutDetail(targetId);
+}
+
+function quickCompareWithSameVariant(workoutId){
+  var w=state.workouts.find(function(x){ return x.id===workoutId; });
+  if (!w) return;
+  var last=findLastWorkoutBySameVariant(w);
+  if (!last) return;
+  _compareChoice[workoutId]=last.id;
+  showWorkoutDetail(workoutId);
+}
+
 function showWorkoutDetail(id){
   var w = state.workouts.find(function(x){ return x.id===id; });
   if (!w) return;
@@ -971,49 +1183,12 @@ function showWorkoutDetail(id){
     s3 += '</div>';
   }
 
-  // ── Sekcja 4: Porównanie z poprzednim treningiem ──
-  var s4 = '';
-  if (w.planId || w.planName) {
-    var samePlan = state.workouts.filter(function(pw){
-      return pw.id !== w.id && (pw.planId===w.planId || pw.planName===w.planName) && new Date(pw.date) < workoutDate;
-    }).sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
-
-    if (samePlan.length) {
-      var prev = samePlan[0];
-      var prevDate = new Date(prev.date);
-      var prevTonnage = prev.tonnage || 0;
-      var prevSets    = prev.totalSets || 0;
-      var prevReps    = prev.totalReps || 0;
-      var prevDur     = prev.duration || 0;
-
-      var diffs = [
-        { icon:'⚖️', label:'Tonaż',        diff: totalTonnage - prevTonnage, unit:'kg', fmt:function(v){return v.toFixed(1);} },
-        { icon:'🔢', label:'Serie',         diff: totalSets - prevSets,    unit:'',   fmt:function(v){return Math.round(v);} },
-        { icon:'🔁', label:'Powtórzenia',   diff: totalReps - prevReps,    unit:'',   fmt:function(v){return Math.round(v);} },
-        { icon:'⏱️', label:'Czas treningu', diff: (w.duration||0) - prevDur, unit:'', fmt:function(v){return formatTime(Math.abs(Math.round(v)));} },
-      ];
-
-      s4 = '<div class="card" style="margin-bottom:12px;padding:14px 16px;">';
-      s4 += '<div style="font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">📊 Vs poprzedni trening</div>';
-      s4 += '<div style="font-size:11px;color:var(--text4);margin-bottom:10px;">'+prevDate.getDate()+' '+months[prevDate.getMonth()]+' '+prevDate.getFullYear()+'</div>';
-      s4 += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">';
-      diffs.forEach(function(df){
-        if (df.diff === 0) return;
-        var isPos = df.label === 'Czas treningu' ? df.diff < 0 : df.diff > 0;
-        var sign  = df.diff > 0 ? '+' : '';
-        var col   = isPos ? 'var(--green)' : 'var(--red)';
-        var arrow = isPos ? '📈' : '📉';
-        var valStr = df.label === 'Czas treningu'
-          ? (df.diff>0?'+':'-')+df.fmt(df.diff)
-          : sign+df.fmt(df.diff)+(df.unit?' '+df.unit:'');
-        s4 += '<div style="background:var(--surface2);border-radius:10px;padding:10px 12px;">'
-          + '<div style="font-size:11px;color:var(--text3);margin-bottom:2px;">'+df.icon+' '+df.label+'</div>'
-          + '<div style="font-size:15px;font-weight:800;color:'+col+';">'+arrow+' '+valStr+'</div>'
-          + '</div>';
-      });
-      s4 += '</div></div>';
-    }
-  }
+  // ── Sekcja 4: Porównanie z wybranym treningiem (użytkownik wybiera — pkt 1 wymagań) ──
+  var chosenId = _compareChoice[w.id];
+  var chosenPrev = chosenId ? state.workouts.find(function(x){ return x.id===chosenId; }) : null;
+  var s4 = chosenPrev
+    ? buildCompareDiffCard(w, chosenPrev, totalTonnage, totalSets, totalReps)
+    : buildCompareCtaCard(w);
 
   // ── Sekcja 5: Top 3 mięśnie ──
   var s5 = '';
