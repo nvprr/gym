@@ -897,5 +897,20 @@ function restoreBackup_trigger(){ document.getElementById('restore-file').value=
   <div class="sheet-body" id="workout-detail-body" style="padding-top:0;"></div>
 </div>
 
+<!-- WORKOUT COMPARE PICKER SHEET -->
+<div class="sheet" id="workout-compare-picker-sheet" style="max-height:92vh;">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <button class="btn btn-ghost" style="padding:0;" onclick="closeSheet('workout-compare-picker-sheet')">✕</button>
+    <div class="sheet-title">Porównaj z</div>
+    <div style="width:40px;"></div>
+  </div>
+  <div class="sheet-body" style="padding-top:0;">
+    <div style="padding:0 0 8px;"><input class="form-input" placeholder="🔍 Szukaj treningu..." oninput="filterCompareWorkouts(this.value)" id="compare-search"></div>
+    <div style="overflow-x:auto;padding:0 0 10px;display:flex;gap:6px;scrollbar-width:none;" id="compare-plan-chips"></div>
+    <div id="compare-workout-list"></div>
+  </div>
+</div>
+
 </body>
 </html>
