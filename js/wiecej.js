@@ -503,6 +503,22 @@ function renderWiecejDane(el) {
 // ── CHANGELOG ──
 var CHANGELOG = [
   {
+  version: '2.2.0',
+  date: '2026-07-30',
+  changes: [
+    '✨ Porównanie treningów — wybierz dowolny trening do porównania zamiast tylko ostatniego',
+    '🎯 Szybkie porównanie z ostatnim treningiem tego samego planu',
+    '🔍 Filtrowanie historii treningów podczas porównywania',
+    '↕️ Przeciąganie (Drag & Drop) ćwiczeń w planach treningowych',
+    '🔢 Automatyczna numeracja ćwiczeń w planach i podczas treningu',
+    '💾 Zapisywanie własnej kolejności ćwiczeń',
+    '📤 GymFlow Share Studio — eksport treningów jako estetyczne grafiki PNG',
+    '🏆 Achievement Cards — udostępniaj rekordy i osiągnięcia',
+    '📈 Progress Cards — udostępniaj porównanie progresu między treningami',
+    '🎨 Nowe szablony udostępniania (Story, Post i Square)',
+  ]
+},
+  {
     version: '2.1.7',
     date: '2025-07-21',
     changes: [
