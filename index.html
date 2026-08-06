@@ -90,6 +90,7 @@
       <div class="segment" style="margin:0 16px 12px;">
         <button class="segment-btn active" id="tab-history-btn" onclick="switchWorkoutTab('history',this)">Historia</button>
         <button class="segment-btn" id="tab-calendar-btn" onclick="switchWorkoutTab('calendar',this)">Kalendarz</button>
+        <button class="segment-btn" id="tab-heatmap-btn" onclick="switchWorkoutTab('heatmap',this)">Heatmapa</button>
       </div>
       <!-- HISTORY TAB -->
       <div id="workout-tab-history">
@@ -121,6 +122,21 @@
           <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;"></div>
         </div>
         <div id="cal-day-detail" style="display:none;"></div>
+      </div>
+      <!-- HEATMAP TAB -->
+      <div id="workout-tab-heatmap" style="display:none;">
+        <div class="stats-grid" style="margin-bottom:12px;">
+          <div class="stat-card"><div class="stat-val accent" id="hm-stat-streak">0</div><div class="stat-label">🔥 Aktualny streak</div></div>
+          <div class="stat-card"><div class="stat-val" id="hm-stat-count">0</div><div class="stat-label">🏋️ Treningów w okresie</div></div>
+          <div class="stat-card"><div class="stat-val green" id="hm-stat-topday">—</div><div class="stat-label">📅 Najaktywniejszy dzień</div></div>
+          <div class="stat-card"><div class="stat-val" id="hm-stat-avg">0</div><div class="stat-label">📈 Śr. treningów/tydz.</div></div>
+        </div>
+        <div class="segment" id="heatmap-range-segment" style="margin:0 16px 12px;">
+          <button class="segment-btn" id="heatmap-range-week" onclick="setHeatmapRange('week')">📅 Tydzień</button>
+          <button class="segment-btn" id="heatmap-range-month" onclick="setHeatmapRange('month')">📅 Miesiąc</button>
+          <button class="segment-btn" id="heatmap-range-year" onclick="setHeatmapRange('year')">📅 Rok</button>
+        </div>
+        <div id="heatmap-content"></div>
       </div>
     </div>
 
@@ -635,6 +651,17 @@
 </div>
 
 
+<!-- HEATMAP DAY DETAIL SHEET -->
+<div class="sheet" id="heatmap-day-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <button class="btn btn-ghost" style="padding:0;" onclick="closeSheet('heatmap-day-sheet')">✕</button>
+    <div class="sheet-title" id="hm-day-sheet-title">📅</div>
+    <div style="width:40px;"></div>
+  </div>
+  <div class="sheet-body" id="hm-day-sheet-body"></div>
+</div>
+
 <!-- WEIGHT SHEET -->
 <div class="sheet" id="body-measurements-sheet">
   <div class="sheet-handle"></div>
@@ -734,6 +761,7 @@ let state = {
 <script src="js/dashboard.js"></script>
 <script src="js/plans.js"></script>
 <script src="js/workout.js"></script>
+<script src="js/heatmap.js"></script>
 <script src="js/cardio.js"></script>
 <script src="js/profile.js"></script>
 <script src="js/achievements.js"></script>
