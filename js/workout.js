@@ -647,9 +647,11 @@ function chooseWorkoutMode(mode){
 function switchWorkoutTab(t,el){
   document.getElementById('workout-tab-history').style.display=t==='history'?'block':'none';
   document.getElementById('workout-tab-calendar').style.display=t==='calendar'?'block':'none';
+  document.getElementById('workout-tab-heatmap').style.display=t==='heatmap'?'block':'none';
   document.querySelectorAll('#view-workout .segment-btn').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
   if(t==='calendar')renderCalendar();
+  if(t==='heatmap')renderHeatmap();
 }
 
 function openExercisePickerForWorkout(){
