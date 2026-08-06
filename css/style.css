@@ -7,13 +7,14 @@
   --surface:#242424;--surface2:#2e2e2e;--surface3:#383838;
   --accent:#ffb753;--accent2:#ffa726;--accent-glow:rgba(255,183,83,0.25);--accent-hover:#e6a347;--accent-light:rgba(255,183,83,0.15);--gradient-start:#ffb753;--gradient-end:#ff8c00;
   --green:#30D158;--yellow:#FFD60A;--orange:#FF9F0A;--red:#FF453A;--blue:#0A84FF;--purple:#BF5AF2;
+  --heat-0:#2B2B2B;--heat-1:#2ECC71;--heat-2:#27AE60;--heat-3:#1E8449;--heat-4:#145A32;
   --text:#FFF;--text2:rgba(255,255,255,.75);--text3:rgba(255,255,255,.45);--text4:rgba(255,255,255,.2);
   --border:rgba(255,255,255,.1);--border2:rgba(255,255,255,.06);
   --radius:16px;--radius2:12px;--radius3:8px;
   --tab-h:83px;--safe-bottom:env(safe-area-inset-bottom,0px);--safe-top:env(safe-area-inset-top,0px);
   --font:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif;
 }
-.light-mode{--bg:#f2f2f7;--bg2:#fff;--bg3:#f2f2f7;--bg4:#e5e5ea;--surface:#fff;--surface2:#f2f2f7;--surface3:#e5e5ea;--text:#000;--text2:rgba(0,0,0,.75);--text3:rgba(0,0,0,.45);--text4:rgba(0,0,0,.2);--border:rgba(0,0,0,.1);--border2:rgba(0,0,0,.06);--accent-glow:rgba(255,55,95,.15)}
+.light-mode{--bg:#f2f2f7;--bg2:#fff;--bg3:#f2f2f7;--bg4:#e5e5ea;--surface:#fff;--surface2:#f2f2f7;--surface3:#e5e5ea;--text:#000;--text2:rgba(0,0,0,.75);--text3:rgba(0,0,0,.45);--text4:rgba(0,0,0,.2);--border:rgba(0,0,0,.1);--border2:rgba(0,0,0,.06);--accent-glow:rgba(255,55,95,.15);--heat-0:#e2e2e7}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font)}
 body{position:fixed;inset:0;overscroll-behavior:none}
@@ -388,6 +389,21 @@ body{position:fixed;inset:0;overscroll-behavior:none}
 .cal-day.today{box-shadow:0 0 0 2px var(--accent)}
 .cal-day.today.no-workout{color:var(--accent)}
 .cal-day:active:not(.empty){transform:scale(.93)}
+/* ── Heatmapa aktywności treningowej ── */
+.heat-day{aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--text3);cursor:pointer;transition:transform .15s}
+.heat-day.empty{visibility:hidden;cursor:default}
+.heat-day.today{box-shadow:0 0 0 2px var(--accent)}
+.heat-day:active:not(.empty){transform:scale(.9)}
+.heat-day-sm{aspect-ratio:1;border-radius:3px;cursor:pointer;transition:transform .1s}
+.heat-day-sm.empty{visibility:hidden;cursor:default}
+.heat-day-sm.today{box-shadow:0 0 0 1.5px var(--accent)}
+.heat-day-sm:active:not(.empty){transform:scale(.85)}
+.heat-0{background:var(--heat-0)}
+.heat-1{background:var(--heat-1)}
+.heat-2{background:var(--heat-2)}
+.heat-3{background:var(--heat-3)}
+.heat-4{background:var(--heat-4)}
+.heat-day.heat-1,.heat-day.heat-2,.heat-day.heat-3,.heat-day.heat-4{color:rgba(255,255,255,.92)}
 
 /* DELETE SET BUTTON */
 .set-del-btn{width:26px;height:26px;border-radius:50%;border:none;background:rgba(255,69,58,.15);color:var(--red);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;margin:auto;flex-shrink:0}
